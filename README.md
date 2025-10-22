@@ -12,8 +12,14 @@ Welcome to CubeCity! This is a cartoon-style 2.5D city simulation game where you
 
 当前制作镜像版本(或截止更新日期)：2025年09月10日
 
-首先感谢原作者的开源。[原项目地址](https://github.com/hexianWeb/CubeCity)  
+首先感谢原作者的开源。  
 原项目中文不完善和没有docker镜像，我完善了中文制作了docker镜像。
+- 原项目地址
+  - 官网 https://cube-city.vercel.app
+  - GitHub仓库 https://github.com/hexianWeb/CubeCity
+- 我汉化和构建docker镜像的仓库
+  - GitHub仓库 https://github.com/Firfr/cube-city
+  - Gitee仓库 https://gitee.com/firfe/cube-city
 
 具体汉化了那些内容，请参考[翻译说明](./翻译说明.md)。
 
@@ -35,14 +41,24 @@ Welcome to CubeCity! This is a cartoon-style 2.5D city simulation game where you
 
 容器内部端口`5141`，可通过设置启动参数来指定监听端口。
 
-- AMD64镜像
-  ```bash
-  swr.cn-north-4.myhuaweicloud.com/firfe/cube-city:2025.09.10
-  ```
-- ARM64镜像
-  ```bash
-  swr.cn-north-4.myhuaweicloud.com/firfe/cube-city:2025.09.10-arm64
-  ```
+- 国内仓库
+  - AMD64镜像
+    ```bash
+    swr.cn-north-4.myhuaweicloud.com/cube-city:2025.09.10
+    ```
+  - ARM64镜像
+    ```bash
+    swr.cn-north-4.myhuaweicloud.com/cube-city:2025.09.10-arm64
+    ```
+- DockerHub仓库
+  - AMD64镜像
+    ```bash
+    cube-city:2025.09.10
+    ```
+  - ARM64镜像
+    ```bash
+    cube-city:2025.09.10-arm64
+    ```
 
 ### docker run 命令部署
 
