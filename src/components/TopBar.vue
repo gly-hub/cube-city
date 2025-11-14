@@ -3,12 +3,43 @@ import { eventBus } from '@/js/utils/event-bus.js'
 import { useGameState } from '@/stores/useGameState.js'
 import { storeToRefs } from 'pinia'
 import { computed, ref, watch } from 'vue'
+import { Teleport } from 'vue'
 import AnimatedNumber from './AnimatedNumber.vue'
 import AudioManager from './AudioManager.vue'
 import GuideModal from './GuideModal.vue'
+import { getNextTitle } from '@/constants/title-config.js'
 
 const gameState = useGameState()
-const { credits, totalJobs, maxPopulation, territory, citySize, cityLevel, cityName, language, showMapOverview, gameDay, power, maxPower, musicEnabled, musicVolume, isPlayingMusic } = storeToRefs(gameState)
+const { credits, totalJobs, maxPopulation, territory, citySize, cityLevel, cityName, language, showMapOverview, gameDay, power, maxPower, musicEnabled, musicVolume, isPlayingMusic, showQuestPanel, meritPoints, buildingCount, dailyIncome, pollution, stability } = storeToRefs(gameState)
+
+// 当前身份
+const currentTitle = computed(() => gameState.getCurrentTitle())
+
+// 获取下一级身份
+function getNextTitleInfo() {
+  if (!currentTitle.value) return null
+  return getNextTitle(meritPoints.value)
+}
+
+// 提示框位置
+const tooltipPosition = ref({ top: 0, right: 0 })
+const showTooltip = ref(false)
+const titleElementRef = ref(null)
+
+// 计算提示框位置
+function updateTooltipPosition(event) {
+  if (!titleElementRef.value) return
+  const rect = titleElementRef.value.getBoundingClientRect()
+  tooltipPosition.value = {
+    top: rect.bottom + 8,
+    right: window.innerWidth - rect.right,
+  }
+  showTooltip.value = true
+}
+
+function hideTooltip() {
+  showTooltip.value = false
+}
 
 // 音乐相关
 const showVolumeSlider = ref(false)
@@ -54,6 +85,10 @@ function toggleMapOverview() {
   gameState.setShowMapOverview(!showMapOverview.value)
 }
 
+function toggleQuestPanel() {
+  gameState.setShowQuestPanel(!showQuestPanel.value)
+}
+
 // 新手指南状态
 const showGuide = ref(false)
 
@@ -68,35 +103,36 @@ function showGuideModal() {
 </script>
 
 <template>
-  <header class="industrial-panel p-4 m-2 shadow-industrial z-[10] relative ">
-    <div class="flex justify-between items-center">
+  <header class="industrial-panel p-3 m-2 shadow-industrial z-[10] relative overflow-visible">
+    <!-- 第一行：主要资源和城市信息 -->
+    <div class="flex justify-between items-center mb-2">
       <!-- 左侧资源信息 -->
-      <div class="flex items-center space-x-6">
+      <div class="flex items-center space-x-4">
         <!-- 金币 -->
-        <div class="resource-display rounded-lg px-4 py-2 flex items-center space-x-3  min-w-[10vw]">
+        <div class="resource-display rounded-lg px-3 py-1.5 flex items-center space-x-2 min-w-[8vw]">
           <div class="status-indicator status-online" />
-          <div class="flex items-center space-x-2">
-            <span class="text-industrial-green text-xl">💰</span>
+          <div class="flex items-center space-x-1.5">
+            <span class="text-industrial-green text-lg">💰</span>
             <div>
-              <div class="text-sm text-gray-400 uppercase " :class="language === 'zh' ? 'tracking-[0.3rem]' : 'tracking-wide'">
+              <div class="text-xs text-gray-400 uppercase" :class="language === 'zh' ? 'tracking-[0.2rem]' : 'tracking-wide'">
                 {{ $t('topbar.credits') }}
               </div>
-              <div class="text-lg font-bold text-industrial-green neon-text">
+              <div class="text-base font-bold text-industrial-green neon-text">
                 <AnimatedNumber :value="credits" :duration="3" separator="," />
               </div>
             </div>
           </div>
         </div>
         <!-- 人口 -->
-        <div class="resource-display rounded-lg px-4 py-2 flex items-center space-x-3 min-w-[10vw]" :class="{ 'warning-pulse': populationWarning }">
+        <div class="resource-display rounded-lg px-3 py-1.5 flex items-center space-x-2 min-w-[8vw]" :class="{ 'warning-pulse': populationWarning }">
           <div class="status-indicator" :class="populationWarning ? 'status-error' : 'status-online'" />
-          <div class="flex items-center space-x-2">
-            <span class="text-xl" :class="populationWarning ? 'text-red-500' : 'text-industrial-blue'">👥</span>
+          <div class="flex items-center space-x-1.5">
+            <span class="text-lg" :class="populationWarning ? 'text-red-500' : 'text-industrial-blue'">👥</span>
             <div>
-              <div class="text-sm text-gray-400 uppercase" :class="language === 'zh' ? 'tracking-[0.3rem]' : 'tracking-wide'">
+              <div class="text-xs text-gray-400 uppercase" :class="language === 'zh' ? 'tracking-[0.2rem]' : 'tracking-wide'">
                 {{ $t('topbar.population') }}
               </div>
-              <div class="text-lg font-bold neon-text" :class="populationWarning ? 'text-red-500' : 'text-industrial-blue'">
+              <div class="text-base font-bold neon-text" :class="populationWarning ? 'text-red-500' : 'text-industrial-blue'">
                 <AnimatedNumber :value="totalJobs" :duration="3" separator="," />/
                 <AnimatedNumber :value="maxPopulation" :duration="3" separator="," />
               </div>
@@ -104,30 +140,30 @@ function showGuideModal() {
           </div>
         </div>
         <!-- 地皮 -->
-        <div class="resource-display rounded-lg px-4 py-2 flex items-center space-x-3">
+        <div class="resource-display rounded-lg px-3 py-1.5 flex items-center space-x-2">
           <div class="status-indicator status-warning" />
-          <div class="flex items-center space-x-2">
-            <span class="text-industrial-accent text-xl">🏭</span>
+          <div class="flex items-center space-x-1.5">
+            <span class="text-industrial-accent text-lg">🏭</span>
             <div>
-              <div class="text-sm text-gray-400 uppercase" :class="language === 'zh' ? 'tracking-[0.3rem]' : 'tracking-wide'">
+              <div class="text-xs text-gray-400 uppercase" :class="language === 'zh' ? 'tracking-[0.2rem]' : 'tracking-wide'">
                 {{ $t('topbar.territory') }}
               </div>
-              <div class="text-lg font-bold text-industrial-accent neon-text">
+              <div class="text-base font-bold text-industrial-accent neon-text">
                 {{ territory }}×{{ citySize }}
               </div>
             </div>
           </div>
         </div>
         <!-- 电力 -->
-        <div class="resource-display rounded-lg px-4 py-2 flex items-center space-x-3 min-w-[10vw]" :class="{ 'warning-pulse': powerWarning }">
+        <div class="resource-display rounded-lg px-3 py-1.5 flex items-center space-x-2 min-w-[8vw]" :class="{ 'warning-pulse': powerWarning }">
           <div class="status-indicator" :class="powerWarning ? 'status-error' : 'status-online'" />
-          <div class="flex items-center space-x-2">
-            <span class="text-xl" :class="powerWarning ? 'text-red-500' : 'text-industrial-yellow'">⚡️</span>
+          <div class="flex items-center space-x-1.5">
+            <span class="text-lg" :class="powerWarning ? 'text-red-500' : 'text-industrial-yellow'">⚡️</span>
             <div>
-              <div class="text-sm text-gray-400 uppercase" :class="language === 'zh' ? 'tracking-[0.3rem]' : 'tracking-wide'">
+              <div class="text-xs text-gray-400 uppercase" :class="language === 'zh' ? 'tracking-[0.2rem]' : 'tracking-wide'">
                 {{ $t('topbar.power') }}
               </div>
-              <div class="text-lg font-bold neon-text" :class="powerWarning ? 'text-red-500' : 'text-industrial-yellow'">
+              <div class="text-base font-bold neon-text" :class="powerWarning ? 'text-red-500' : 'text-industrial-yellow'">
                 <AnimatedNumber :value="power" :duration="3" separator="," />/
                 <AnimatedNumber :value="maxPower" :duration="3" separator="," />
               </div>
@@ -136,20 +172,72 @@ function showGuideModal() {
         </div>
       </div>
       <!-- 右侧城市信息和按钮 -->
-      <div class="text-right flex items-center space-x-4 mr-4">
+      <div class="text-right flex items-center space-x-3">
         <!-- 城市信息 -->
         <div>
-          <h1 class="text-2xl font-black text-industrial-accent neon-text uppercase tracking-wider">
+          <h1 class="text-xl font-black text-industrial-accent neon-text uppercase tracking-wider">
             {{ cityName }}
           </h1>
-          <div class="flex items-center justify-end space-x-2 mt-1">
+          <div class="flex items-center justify-end space-x-2 mt-0.5 relative">
             <div class="status-indicator status-online" />
-            <span class="text-sm text-gray-400 uppercase tracking-wide">{{ $t('topbar.level') }} <span class="text-white">{{ cityLevel }}</span> • {{ $t('topbar.day') }} <span class="text-white">{{ gameDay }}</span> </span>
+            <span class="text-xs text-gray-400 uppercase tracking-wide">
+              {{ $t('topbar.level') }} <span class="text-white">{{ cityLevel }}</span> • {{ $t('topbar.day') }} <span class="text-white">{{ gameDay }}</span>
+              <span
+                v-if="currentTitle"
+                ref="titleElementRef"
+                class="text-industrial-yellow cursor-help hover:text-industrial-yellow/80 transition-colors relative inline-block"
+                @mouseenter="updateTooltipPosition"
+                @mouseleave="hideTooltip"
+              >
+                • {{ currentTitle.icon }} {{ currentTitle.name[language] }}
+              </span>
+            </span>
+            <!-- 悬停提示框 - 使用 fixed 定位，放在外层 -->
+            <Teleport to="body">
+              <div
+                v-if="currentTitle && showTooltip"
+                class="fixed w-64 p-3 bg-gray-900 border-2 border-industrial-yellow rounded-lg shadow-xl transition-all duration-200 z-[9999]"
+                :style="{
+                  top: `${tooltipPosition.top}px`,
+                  right: `${tooltipPosition.right}px`,
+                }"
+                @mouseenter="showTooltip = true"
+                @mouseleave="hideTooltip"
+              >
+                <div class="flex items-center space-x-2 mb-2">
+                  <span class="text-2xl">{{ currentTitle.icon }}</span>
+                  <div>
+                    <div class="text-sm font-bold text-industrial-yellow uppercase">
+                      {{ currentTitle.name[language] }}
+                    </div>
+                    <div class="text-xs text-gray-400">
+                      {{ language === 'zh' ? '当前身份' : 'Current Title' }}
+                    </div>
+                  </div>
+                </div>
+                <div class="text-xs text-gray-300 mt-2 pt-2 border-t border-gray-700">
+                  <div class="mb-1">
+                    <span class="text-gray-400">{{ language === 'zh' ? '政绩分：' : 'Merit Points: ' }}</span>
+                    <span class="text-industrial-yellow font-bold">{{ meritPoints }}</span>
+                  </div>
+                  <div v-if="getNextTitleInfo()" class="mt-2">
+                    <span class="text-gray-400">{{ language === 'zh' ? '下一级：' : 'Next Level: ' }}</span>
+                    <span class="text-white">{{ getNextTitleInfo().name[language] }}</span>
+                    <div class="text-gray-500 text-xs mt-1">
+                      {{ language === 'zh' ? '需要' : 'Requires' }} {{ getNextTitleInfo().minMeritPoints }} {{ language === 'zh' ? '政绩分' : 'merit points' }}
+                    </div>
+                  </div>
+                  <div v-else class="mt-2 text-gray-500 text-xs">
+                    {{ language === 'zh' ? '已达到最高身份' : 'Maximum title reached' }}
+                  </div>
+                </div>
+              </div>
+            </Teleport>
           </div>
         </div>
 
-        <!-- 按钮区域 - 两列布局 -->
-        <div class="grid grid-cols-3 gap-2">
+        <!-- 按钮区域 - 紧凑布局 -->
+        <div class="flex gap-1.5">
           <!-- 第一行 -->
           <button class="px-2 py-1 rounded bg-gray-700 text-white text-sm font-medium hover:bg-gray-600 transition" @click="toggleLang">
             {{ language === 'zh' ? 'EN' : '中' }}
@@ -207,6 +295,86 @@ function showGuideModal() {
           >
             {{ language === 'zh' ? (showMapOverview ? '🗺️ 隐藏' : '🗺️ 地图') : (showMapOverview ? '🗺️ Hide' : '🗺️ Map') }}
           </button>
+
+          <!-- 第三行：任务按钮 -->
+          <button
+            class="px-3 col-span-3 py-1 rounded bg-purple-600 text-white text-sm font-bold shadow hover:bg-purple-500 transition"
+            @click="toggleQuestPanel"
+          >
+            📋 {{ language === 'zh' ? '任务' : 'Quests' }}
+          </button>
+        </div>
+      </div>
+    </div>
+    <!-- 第二行：城市指标和系统状态 -->
+    <div class="flex justify-between items-center pt-2 border-t border-gray-700">
+      <!-- 城市指标 -->
+      <div class="flex items-center space-x-4">
+        <div class="flex items-center space-x-2">
+          <span class="text-xs text-gray-400 uppercase" :class="language === 'zh' ? 'tracking-[0.2rem]' : 'tracking-wide'">
+            {{ $t('dashboardFooter.buildings') }}:
+          </span>
+          <span class="text-sm font-bold text-industrial-green neon-text">
+            <AnimatedNumber :value="buildingCount" :duration="2" />
+          </span>
+        </div>
+        <div class="flex items-center space-x-2">
+          <span class="text-xs text-gray-400 uppercase" :class="language === 'zh' ? 'tracking-[0.2rem]' : 'tracking-wide'">
+            {{ $t('dashboardFooter.dailyIncome') }}:
+          </span>
+          <span class="text-sm font-bold text-industrial-blue neon-text">
+            +<AnimatedNumber :value="dailyIncome" :duration="2" separator="," />
+          </span>
+        </div>
+        <div class="flex items-center space-x-2">
+          <span class="text-xs text-gray-400 uppercase" :class="language === 'zh' ? 'tracking-[0.2rem]' : 'tracking-wide'">
+            {{ $t('dashboardFooter.efficiency') }}:
+          </span>
+          <span
+            class="text-sm font-bold neon-text"
+            :class="pollution > 100 ? 'text-red-500' : 'text-industrial-yellow'"
+          >
+            <AnimatedNumber :value="pollution" :duration="2" />
+          </span>
+        </div>
+        <div class="flex items-center space-x-2">
+          <span class="text-xs text-gray-400 uppercase" :class="language === 'zh' ? 'tracking-[0.2rem]' : 'tracking-wide'">
+            {{ $t('dashboardFooter.stability') }}:
+          </span>
+          <span class="text-sm font-bold text-industrial-green neon-text">
+            <AnimatedNumber :value="stability" :duration="2" />%
+          </span>
+        </div>
+      </div>
+      <!-- 系统状态 -->
+      <div class="flex items-center space-x-4">
+        <div class="flex items-center space-x-1.5">
+          <span class="text-xs text-gray-400 uppercase" :class="language === 'zh' ? 'tracking-[0.2rem]' : 'tracking-wide'">
+            {{ $t('dashboardFooter.powerGrid') }}:
+          </span>
+          <div class="status-indicator status-online" />
+          <span class="text-xs text-industrial-green uppercase">{{ $t('dashboardFooter.online') }}</span>
+        </div>
+        <div class="flex items-center space-x-1.5">
+          <span class="text-xs text-gray-400 uppercase" :class="language === 'zh' ? 'tracking-[0.2rem]' : 'tracking-wide'">
+            {{ $t('dashboardFooter.transport') }}:
+          </span>
+          <div class="status-indicator status-warning" />
+          <span class="text-xs text-industrial-yellow uppercase">{{ $t('dashboardFooter.limited') }}</span>
+        </div>
+        <div class="flex items-center space-x-1.5">
+          <span class="text-xs text-gray-400 uppercase" :class="language === 'zh' ? 'tracking-[0.2rem]' : 'tracking-wide'">
+            {{ $t('dashboardFooter.security') }}:
+          </span>
+          <div class="status-indicator status-online" />
+          <span class="text-xs text-industrial-green uppercase">{{ $t('dashboardFooter.secure') }}</span>
+        </div>
+        <div class="flex items-center space-x-1.5">
+          <span class="text-xs text-gray-400 uppercase" :class="language === 'zh' ? 'tracking-[0.2rem]' : 'tracking-wide'">
+            {{ $t('dashboardFooter.environment') }}:
+          </span>
+          <div class="status-indicator status-warning" />
+          <span class="text-xs text-industrial-yellow uppercase">{{ $t('dashboardFooter.moderate') }}</span>
         </div>
       </div>
     </div>

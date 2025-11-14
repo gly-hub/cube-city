@@ -195,8 +195,20 @@ const upgradeImprovements = computed(() => {
       </div>
     </div>
     <div v-if="currentMode === 'select'" class="mt-6 space-y-2">
-      <button class="industrial-button w-full text-white font-bold py-3 px-4 text-sm uppercase tracking-wide" @click="$emit('upgrade')">
+      <button 
+        v-if="nextLevelData"
+        class="industrial-button w-full text-white font-bold py-3 px-4 text-sm uppercase tracking-wide hover:bg-industrial-green/80 transition"
+        :disabled="!nextLevelData"
+        @click="$emit('upgrade')"
+      >
         ⬆️ {{ t('buildingDetails.upgradeUnit') }}
+      </button>
+      <button 
+        v-else
+        class="industrial-button w-full text-white font-bold py-3 px-4 text-sm uppercase tracking-wide opacity-50 cursor-not-allowed"
+        disabled
+      >
+        ⬆️ {{ t('buildingDetails.upgradeUnit') }} ({{ locale === 'zh' ? '已达最高级' : 'Max Level' }})
       </button>
       <button class="industrial-button w-full text-white font-bold py-3 px-4 text-sm uppercase tracking-wide" @click="$emit('repair')">
         🔧 {{ t('buildingDetails.maintenanceBtn') }}

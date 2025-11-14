@@ -4,13 +4,40 @@ import { computed, onMounted, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useGameState } from '../stores/useGameState'
 import AnimatedNumber from './AnimatedNumber.vue'
+import { getAllAchievements } from '@/constants/achievement-config.js'
 
 const gameState = useGameState()
 const { t } = useI18n()
-const { buildingCount, dailyIncome, pollution, stability } = storeToRefs(gameState)
+const { buildingCount, dailyIncome, pollution, stability, unlockedAchievements } = storeToRefs(gameState)
+
+// 获取最近的成就用于显示
+const recentAchievements = computed(() => {
+  const allAchievements = getAllAchievements()
+  return allAchievements
+    .filter(ach => gameState.isAchievementUnlocked(ach.id))
+    .slice(-2) // 显示最近解锁的2个成就
+})
+
+// 获取未解锁但进度最高的成就
+const inProgressAchievements = computed(() => {
+  const allAchievements = getAllAchievements()
+  return allAchievements
+    .filter(ach => !gameState.isAchievementUnlocked(ach.id))
+    .map(ach => {
+      const progress = gameState.achievementProgress[ach.id]
+      return {
+        ...ach,
+        progress: progress?.progress || 0,
+        target: progress?.target || 0,
+        percent: progress?.target > 0 ? (progress.progress / progress.target) * 100 : 0,
+      }
+    })
+    .sort((a, b) => b.percent - a.percent)
+    .slice(0, 2) // 显示进度最高的2个成就
+})
 
 function showAchievements() {
-  gameState.addToast(t('dashboardFooter.achievementLoading'), 'info')
+  gameState.setShowAchievementPanel(true)
 }
 
 onMounted(() => {
@@ -107,24 +134,45 @@ const systemStatusList = computed(() => [
           {{ t('dashboardFooter.achievements') }}
         </h3>
         <div class="space-y-2">
-          <div class="flex items-center justify-between bg-industrial-gray rounded p-2">
-            <div class="flex items-center space-x-2">
-              <span class="text-industrial-yellow">🏆</span>
-              <span class="text-xs text-gray-300 uppercase">{{ t('dashboardFooter.firstFactory') }}</span>
+          <!-- 已解锁的成就 -->
+          <div
+            v-for="achievement in recentAchievements"
+            :key="achievement.id"
+            class="flex items-center justify-between bg-industrial-gray rounded p-2"
+          >
+            <div class="flex items-center space-x-2 flex-1 min-w-0">
+              <span class="text-industrial-yellow text-lg flex-shrink-0">{{ achievement.icon }}</span>
+              <span class="text-xs text-gray-300 uppercase truncate">
+                {{ achievement.name[gameState.language] }}
+              </span>
             </div>
-            <div class="status-indicator status-online" />
+            <div class="status-indicator status-online flex-shrink-0 ml-2" />
           </div>
-          <div class="flex items-center justify-between bg-industrial-gray rounded p-2">
-            <div class="flex items-center space-x-2">
-              <span class="text-gray-500">🏆</span>
-              <span class="text-xs text-gray-500 uppercase">{{ t('dashboardFooter.industrialTycoon') }}</span>
+          <!-- 进行中的成就 -->
+          <div
+            v-for="achievement in inProgressAchievements"
+            :key="achievement.id"
+            class="flex items-center justify-between bg-industrial-gray rounded p-2"
+          >
+            <div class="flex items-center space-x-2 flex-1 min-w-0">
+              <span class="text-gray-500 text-lg flex-shrink-0">{{ achievement.icon }}</span>
+              <span class="text-xs text-gray-500 uppercase truncate">
+                {{ achievement.name[gameState.language] }}
+              </span>
             </div>
-            <div class="text-xs text-gray-500">
-              75%
+            <div class="text-xs text-gray-500 flex-shrink-0 ml-2">
+              {{ Math.floor(achievement.percent) }}%
             </div>
+          </div>
+          <!-- 如果没有成就，显示提示 -->
+          <div
+            v-if="recentAchievements.length === 0 && inProgressAchievements.length === 0"
+            class="text-xs text-gray-500 text-center py-2"
+          >
+            {{ t('dashboardFooter.noAchievements') }}
           </div>
           <button
-            class="industrial-button w-full text-white font-bold py-2 px-4 text-xs uppercase tracking-wide"
+            class="industrial-button w-full text-white font-bold py-2 px-4 text-xs uppercase tracking-wide mt-2"
             @click="showAchievements"
           >
             {{ t('dashboardFooter.viewAllAchievements') }}

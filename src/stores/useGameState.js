@@ -1,6 +1,8 @@
 import { getAdjustedStabilityRate, STABILITY_CONFIG } from '@/constants/constants.js'
 import { getEffectiveBuildingValue } from '@/js/utils/building-interaction-utils.js'
 import { defineStore } from 'pinia'
+import { getTitleByMeritPoints } from '@/constants/title-config.js'
+import { eventBus } from '@/js/utils/event-bus.js'
 
 export const useGameState = defineStore('gameState', {
   state: () => ({
@@ -37,6 +39,27 @@ export const useGameState = defineStore('gameState', {
     stability: 100,
     stabilityChangeRate: 0,
     // 移除：stabilityIntervalId: null,
+
+    // 关卡系统状态
+    currentLevel: 1, // 当前关卡
+    unlockedLevels: [1], // 已解锁的关卡列表
+    totalEarnedCredits: 0, // 累计获得的金币（用于任务追踪）
+
+    // 任务系统状态
+    completedQuests: [], // 已完成的任务ID列表
+    questProgress: {}, // 任务进度 { questId: { progress, target, completed } }
+    showQuestPanel: false, // 是否显示任务面板
+    showLevelUnlockModal: false, // 是否显示关卡解锁弹窗
+    pendingLevelUnlock: null, // 待解锁的关卡信息
+
+    // 成就系统状态
+    unlockedAchievements: [], // 已解锁的成就ID列表
+    achievementProgress: {}, // 成就进度 { achievementId: { progress, target, unlocked } }
+    showAchievementPanel: false, // 是否显示成就面板
+
+    // 政绩分和身份系统
+    meritPoints: 0, // 累计政绩分
+    currentTitle: 'village_staff', // 当前身份ID
   }),
   getters: {
     /**
@@ -284,7 +307,9 @@ export const useGameState = defineStore('gameState', {
      */
     nextDay() {
       // 经济系统更新
-      this.credits += this.dailyIncome
+      const income = this.dailyIncome
+      this.credits += income
+      this.addTotalEarnedCredits(income) // 累计获得的金币
       this.gameDay++
 
       // 稳定度系统更新（每5秒执行一次）
@@ -315,6 +340,19 @@ export const useGameState = defineStore('gameState', {
       this.musicEnabled = false
       this.musicVolume = 0.5
       this.isPlayingMusic = false
+      this.currentLevel = 1
+      this.unlockedLevels = [1]
+      this.totalEarnedCredits = 0
+      this.completedQuests = []
+      this.questProgress = {}
+      this.showQuestPanel = false
+      this.showLevelUnlockModal = false
+      this.pendingLevelUnlock = null
+      this.unlockedAchievements = []
+      this.achievementProgress = {}
+      this.showAchievementPanel = false
+      this.meritPoints = 0
+      this.currentTitle = 'village_staff'
     },
 
     // 音乐系统相关方法
@@ -332,6 +370,143 @@ export const useGameState = defineStore('gameState', {
     },
     setMusicPlaying(playing) {
       this.isPlayingMusic = playing
+    },
+
+    // 关卡系统相关方法
+    setCurrentLevel(level) {
+      this.currentLevel = level
+    },
+    unlockLevel(level) {
+      if (!this.unlockedLevels.includes(level)) {
+        this.unlockedLevels.push(level)
+        this.unlockedLevels.sort((a, b) => a - b)
+      }
+    },
+    isLevelUnlocked(level) {
+      return this.unlockedLevels.includes(level)
+    },
+    setTotalEarnedCredits(amount) {
+      this.totalEarnedCredits = amount
+    },
+    addTotalEarnedCredits(amount) {
+      this.totalEarnedCredits += amount
+    },
+
+    // 任务系统相关方法
+    completeQuest(questId) {
+      if (!this.completedQuests.includes(questId)) {
+        this.completedQuests.push(questId)
+      }
+    },
+    isQuestCompleted(questId) {
+      return this.completedQuests.includes(questId)
+    },
+    updateQuestProgress(questId, progress) {
+      if (!this.questProgress[questId]) {
+        this.questProgress[questId] = { progress: 0, target: 0, completed: false }
+      }
+      Object.assign(this.questProgress[questId], progress)
+    },
+    setShowQuestPanel(show) {
+      this.showQuestPanel = show
+    },
+    setShowLevelUnlockModal(show) {
+      this.showLevelUnlockModal = show
+    },
+    setPendingLevelUnlock(levelInfo) {
+      this.pendingLevelUnlock = levelInfo
+    },
+
+    // 成就系统相关方法
+    unlockAchievement(achievementId) {
+      if (!this.unlockedAchievements.includes(achievementId)) {
+        this.unlockedAchievements.push(achievementId)
+      }
+    },
+    isAchievementUnlocked(achievementId) {
+      return this.unlockedAchievements.includes(achievementId)
+    },
+    updateAchievementProgress(achievementId, progress) {
+      if (!this.achievementProgress[achievementId]) {
+        this.achievementProgress[achievementId] = { progress: 0, target: 0, unlocked: false }
+      }
+      Object.assign(this.achievementProgress[achievementId], progress)
+    },
+    setShowAchievementPanel(show) {
+      this.showAchievementPanel = show
+    },
+
+    // 政绩分和身份系统相关方法
+    addMeritPoints(points) {
+      this.meritPoints += points
+      // 检查是否需要更新身份
+      this.updateCurrentTitle()
+    },
+    updateCurrentTitle() {
+      const newTitle = getTitleByMeritPoints(this.meritPoints)
+      if (newTitle && newTitle.id !== this.currentTitle) {
+        const oldTitle = this.currentTitle
+        this.currentTitle = newTitle.id
+        // 触发身份升级事件
+        if (oldTitle !== 'village_staff') {
+          // 不是初始身份，触发升级通知
+          eventBus.emit('title:upgraded', {
+            oldTitle,
+            newTitle: newTitle.id,
+            title: newTitle,
+          })
+        }
+      }
+    },
+    getCurrentTitle() {
+      return getTitleByMeritPoints(this.meritPoints)
+    },
+
+    // 扩展地图大小（保留原有数据）
+    expandMap(newSize) {
+      const oldSize = this.citySize
+      this.citySize = newSize
+      this.territory = newSize
+
+      // 扩展 metadata 数组
+      const newMetadata = Array.from({ length: newSize }, (_, x) =>
+        Array.from({ length: newSize }, (_, y) => {
+          // 如果坐标在旧地图范围内，保留原有数据
+          if (x < oldSize && y < oldSize && this.metadata[x] && this.metadata[x][y]) {
+            return { ...this.metadata[x][y] }
+          }
+          // 否则创建新的空地
+          return {
+            type: 'grass',
+            building: null,
+            direction: 0,
+          }
+        })
+      )
+
+      this.metadata = newMetadata
+    },
+
+    // 重置地图为新关卡（清空所有建筑数据）
+    resetMapForLevel(newSize) {
+      this.citySize = newSize
+      this.territory = newSize
+
+      // 创建全新的空地图，不保留任何建筑数据
+      this.metadata = Array.from({ length: newSize }, (_, x) =>
+        Array.from({ length: newSize }, (_, y) => ({
+          type: 'grass',
+          building: null,
+          direction: 0,
+          level: 0,
+          detail: null,
+          outputFactor: 1,
+        }))
+      )
+
+      // 清空选中状态
+      this.selectedBuilding = null
+      this.selectedPosition = null
     },
   },
   persist: true, // 启用持久化

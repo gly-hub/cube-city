@@ -2,10 +2,9 @@
 import { eventBus } from '@/js/utils/event-bus.js'
 import { useGameState } from '@/stores/useGameState.js'
 import { onMounted, onUnmounted, ref } from 'vue'
-import BuildingDetails from './components/BuildingDetails.vue'
 import BuildingSidebar from './components/BuildingSidebar.vue'
+import RightInfoPanel from './components/RightInfoPanel.vue'
 import ConfirmDialog from './components/ConfirmDialog.vue'
-import DashboardFooter from './components/DashboardFooter.vue'
 import GameCanvas from './components/GameCanvas.vue'
 import MapOverview from './components/MapOverview.vue'
 import ModeIndicator from './components/ModeIndicator.vue'
@@ -13,6 +12,9 @@ import RestorePrompt from './components/RestorePrompt.vue'
 import SelectedIndicator from './components/SelectedIndicator.vue'
 import ToastContainer from './components/ToastContainer.vue'
 import TopBar from './components/TopBar.vue'
+import QuestPanel from './components/QuestPanel.vue'
+import LevelUnlockModal from './components/LevelUnlockModal.vue'
+import AchievementPanel from './components/AchievementPanel.vue'
 import { useBuilding } from './hooks/useBuilding.js'
 
 const showDialog = ref(false)
@@ -102,13 +104,13 @@ onUnmounted(() => {
   <div>
     <RestorePrompt />
     <TopBar />
-    <div class="flex gap-2 px-2 h-[calc(100vh-200px)]">
+    <div class="flex gap-2 px-2 h-[calc(100vh-160px)]">
       <BuildingSidebar />
       <main class="flex-1 industrial-panel shadow-industrial relative overflow-hidden industrial-grid">
         <ModeIndicator />
         <SelectedIndicator />
-        <BuildingDetails />
       </main>
+      <RightInfoPanel />
       <!-- 新增：地图总览，右上角浮动显示 -->
       <transition name="fade">
         <div v-if="gameState.showMapOverview" class="absolute top-[20%] right-[50%] translate-x-[50%] w-[min(90vw,600px)] h-[min(90vh,600px)] z-50 bg-[#212121] rounded-lg shadow-lg p-2" @contextmenu.prevent="gameState.setShowMapOverview(false)">
@@ -124,7 +126,6 @@ onUnmounted(() => {
         </div>
       </transition>
     </div>
-    <DashboardFooter />
     <ToastContainer />
     <ConfirmDialog
       v-if="dialogData"
@@ -137,6 +138,9 @@ onUnmounted(() => {
       @confirm="handleConfirm"
       @cancel="handleCancel"
     />
+    <QuestPanel />
+    <LevelUnlockModal />
+    <AchievementPanel />
   </div>
   <GameCanvas />
 </template>

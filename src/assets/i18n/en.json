@@ -6,6 +6,8 @@
     "power": "Power",
     "level": "Lv",
     "day": "Day",
+    "meritPoints": "Merit Points",
+    "title": "Title",
     "music": {
       "playMusic": "Play Music",
       "pauseMusic": "Pause Music",
@@ -42,7 +44,32 @@
     "limited": "Limited",
     "secure": "Secure",
     "moderate": "Moderate",
-    "online": "Online"
+    "online": "Online",
+    "noAchievements": "No achievements yet"
+  },
+  "achievementPanel": {
+    "title": "Achievements",
+    "close": "Close",
+    "unlocked": "Unlocked",
+    "common": "Common",
+    "rare": "Rare",
+    "epic": "Epic",
+    "legendary": "Legendary",
+    "all": "All",
+    "building": "Building",
+    "resource": "Resource",
+    "metric": "Metric",
+    "milestone": "Milestone",
+    "special": "Special",
+    "progress": "Progress",
+    "reward": "Reward",
+    "meritPoints": "Merit Points",
+    "rarity": {
+      "common": "Common",
+      "rare": "Rare",
+      "epic": "Epic",
+      "legendary": "Legendary"
+    }
   },
   "modeIndicator": {
     "mode": "Mode"

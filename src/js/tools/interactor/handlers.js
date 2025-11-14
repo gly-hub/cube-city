@@ -72,6 +72,12 @@ export function handleBuildMode(ctx, tile) {
   tile.setType('ground')
   updateAdjacentRoads(tile, ctx.experience.world.city)
   showBuildingPlacedToast(buildingTypeToBuild, tile, buildingLevelToBuild, ctx.gameState)
+  
+  // 触发建筑建造事件（用于任务系统）
+  eventBus.emit('building:placed', {
+    building: { type: buildingTypeToBuild, level: buildingLevelToBuild },
+    tile: { x, y },
+  })
 }
 
 /**
@@ -178,26 +184,67 @@ export function handleDefaultMode(tile) {
  */
 export function confirmUpgrade(ctx) {
   const building = ctx.selected?.buildingInstance
-  if (building && typeof building.upgrade === 'function') {
-    const newBuilding = building.upgrade()
-    if (newBuilding) {
-      ctx.selected.setBuilding(newBuilding.type, newBuilding.level || 1, newBuilding.direction)
-      ctx.gameState.setTile(ctx.selected.x, ctx.selected.y, {
-        detail: BUILDING_DATA[newBuilding.type]?.levels[newBuilding.level],
-        outputFactor: BUILDING_DATA[newBuilding.type]?.levels[newBuilding.level]?.outputFactor || 1,
-      })
-      const message = ctx.gameState.language === 'zh'
-        ? '建筑升级成功！'
-        : 'Building upgraded successfully!'
-      showToast('success', message)
-    }
-    else {
-      const message = ctx.gameState.language === 'zh'
-        ? '建筑已达到最高等级。'
-        : 'The building has reached the maximum level.'
-      showToast('error', message)
-    }
+  if (!building || typeof building.upgrade !== 'function') {
+    const message = ctx.gameState.language === 'zh'
+      ? '无法升级此建筑。'
+      : 'Cannot upgrade this building.'
+    showToast('error', message)
+    return
   }
+
+  const newBuilding = building.upgrade()
+  if (!newBuilding) {
+    const message = ctx.gameState.language === 'zh'
+      ? '建筑已达到最高等级。'
+      : 'The building has reached the maximum level.'
+    showToast('error', message)
+    return
+  }
+
+  // 检查升级费用（从当前等级的 upgradeCost 获取）
+  const currentLevelData = BUILDING_DATA[building.type]?.levels[building.level]
+  const upgradeCost = currentLevelData?.upgradeCost
+  if (!upgradeCost || upgradeCost === null) {
+    const message = ctx.gameState.language === 'zh'
+      ? '该建筑无法升级。'
+      : 'This building cannot be upgraded.'
+    showToast('error', message)
+    return
+  }
+
+  // 检查金币是否充足
+  if (ctx.gameState.credits < upgradeCost) {
+    const message = ctx.gameState.language === 'zh'
+      ? `金币不足！需要 ${upgradeCost} 金币`
+      : `Insufficient credits! Need ${upgradeCost} credits`
+    showToast('error', message)
+    return
+  }
+
+  // 扣除升级费用
+  ctx.gameState.updateCredits(-upgradeCost)
+
+  // 更新建筑实例
+  ctx.selected.setBuilding(newBuilding.type, newBuilding.level || 1, newBuilding.direction)
+
+  // 更新 metadata
+  ctx.gameState.setTile(ctx.selected.x, ctx.selected.y, {
+    level: newBuilding.level,
+    detail: BUILDING_DATA[newBuilding.type]?.levels[newBuilding.level],
+    outputFactor: BUILDING_DATA[newBuilding.type]?.levels[newBuilding.level]?.outputFactor || 1,
+  })
+
+  // 触发建筑升级事件（用于任务系统）
+  eventBus.emit('building:upgraded', {
+    building: { type: newBuilding.type, level: newBuilding.level },
+    tile: { x: ctx.selected.x, y: ctx.selected.y },
+    level: newBuilding.level,
+  })
+
+  const message = ctx.gameState.language === 'zh'
+    ? '建筑升级成功！'
+    : 'Building upgraded successfully!'
+  showToast('success', message)
 }
 
 /**

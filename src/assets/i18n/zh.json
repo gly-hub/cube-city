@@ -7,6 +7,8 @@
     "level": "等级",
     "online": "在线",
     "day": "天数",
+    "meritPoints": "政绩分",
+    "title": "身份",
     "music": {
       "playMusic": "播放音乐",
       "pauseMusic": "暂停音乐",
@@ -43,7 +45,32 @@
     "limited": "受限",
     "secure": "安全",
     "moderate": "适中",
-    "online": "在线"
+    "online": "在线",
+    "noAchievements": "暂无成就"
+  },
+  "achievementPanel": {
+    "title": "成就系统",
+    "close": "关闭",
+    "unlocked": "已解锁",
+    "common": "普通",
+    "rare": "稀有",
+    "epic": "史诗",
+    "legendary": "传说",
+    "all": "全部",
+    "building": "建造",
+    "resource": "资源",
+    "metric": "指标",
+    "milestone": "里程碑",
+    "special": "特殊",
+    "progress": "进度",
+    "reward": "奖励",
+    "meritPoints": "政绩分",
+    "rarity": {
+      "common": "普通",
+      "rare": "稀有",
+      "epic": "史诗",
+      "legendary": "传说"
+    }
   },
   "modeIndicator": {
     "mode": "模式"

@@ -12,6 +12,9 @@ import Stats from './utils/stats.js'
 import Time from './utils/time.js'
 import PhysicsWorld from './world/physics-world.js'
 import World from './world/world.js'
+import LevelSystem from './utils/level-system.js'
+import QuestSystem from './utils/quest-system.js'
+import AchievementSystem from './utils/achievement-system.js'
 
 let instance
 
@@ -46,6 +49,32 @@ export default class Experience {
     this.world = new World()
     this.gameState = useGameState()
 
+    // 初始化关卡系统、任务系统和成就系统
+    this.levelSystem = new LevelSystem()
+    this.questSystem = new QuestSystem()
+    this.achievementSystem = new AchievementSystem()
+    
+    // 将系统挂载到全局，方便访问
+    window.levelSystem = this.levelSystem
+    window.questSystem = this.questSystem
+    window.achievementSystem = this.achievementSystem
+
+    // 启动关卡检测
+    this.levelSystem.start()
+
+    // 等待资源加载完成后，刷新任务和成就进度（扫描现有建筑）
+    this.resources.on('ready', () => {
+      // 延迟一下确保 metadata 已初始化
+      setTimeout(() => {
+        if (this.questSystem) {
+          this.questSystem.refreshAllQuests()
+        }
+        if (this.achievementSystem) {
+          this.achievementSystem.refreshAllAchievements()
+        }
+      }, 500)
+    })
+
     this.sizes.on('resize', () => {
       this.resize()
     })
@@ -66,5 +95,12 @@ export default class Experience {
     this.renderer.update() // 切换为手动更新
     this.stats.update()
     this.iMouse.update()
+    
+    // 定期检查指标类成就（每5秒检查一次）
+    if (this.time && this.time.elapsed % 5000 < 100) {
+      if (this.achievementSystem) {
+        this.achievementSystem.checkMetricAchievements()
+      }
+    }
   }
 }

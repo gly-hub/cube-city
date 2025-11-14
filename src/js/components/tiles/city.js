@@ -1,6 +1,7 @@
 import { SIZE } from '@/constants/constants.js' // 导入常量
 import { useGameState } from '@/stores/useGameState.js'
 import { storeToRefs } from 'pinia'
+import { eventBus } from '../../utils/event-bus.js'
 
 import * as THREE from 'three'
 import Experience from '../../experience.js'
@@ -15,17 +16,30 @@ export default class City {
     this.resources = this.experience.resources
     this.debug = this.experience.debug
     this.sceneMetadata = this.experience.sceneMetadata
+    this.gameState = useGameState()
     // 地皮专用 Group
     this.root = new THREE.Group()
     this.scene.add(this.root)
-    // 地皮尺寸
-    this.size = SIZE
+    // 地皮尺寸（从 gameState 读取，支持动态变化）
+    this.size = this.gameState.citySize || SIZE
     // 存储所有 tile
     this.meshes = []
     // 统一地皮颜色
     this.params = {
       color: '#8ec07c',
     }
+
+    // 监听地图扩展事件
+    eventBus.on('map:expanded', () => {
+      this.size = this.gameState.citySize
+      this.initTiles()
+    })
+
+    // 监听地图重置事件（关卡切换时）
+    eventBus.on('map:reset', () => {
+      this.size = this.gameState.citySize
+      this.initTiles()
+    })
 
     // 初始化地皮
     this.initTiles()
@@ -36,13 +50,15 @@ export default class City {
     }
   }
 
-  // 初始化 17x17 地皮，分布在 XOZ 平面 -8~+8
+  // 初始化地皮，支持动态大小
   initTiles() {
     this.meshes = []
     this.root.clear()
 
-    const gameState = useGameState()
-    const { metadata } = storeToRefs(gameState)
+    // 更新尺寸（从 gameState 读取最新值）
+    this.size = this.gameState.citySize || SIZE
+
+    const { metadata } = storeToRefs(this.gameState)
     const meta = metadata.value
     for (let x = 0; x < this.size; x++) {
       const row = []

@@ -18,7 +18,15 @@ const building = computed(() => {
   const { type, level } = selectedBuilding.value
   const base = BUILDING_DATA[type] || {}
   const levelData = base.levels?.[level] || {}
-  return { ...base, ...levelData, level }
+  // 确保包含 nextLevel 和 levels 属性，用于升级功能
+  return { 
+    ...base, 
+    ...levelData, 
+    level,
+    nextLevel: levelData.nextLevel || null,
+    levels: base.levels || {},
+    upgradeCost: levelData.upgradeCost || null,
+  }
 })
 
 // 升级建筑
