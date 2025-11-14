@@ -388,10 +388,238 @@ function toggleContent() {
             </div>
           </section>
 
+          <!-- 关卡系统 -->
+          <section>
+            <h3 class="text-lg font-bold text-industrial-accent uppercase tracking-wide mb-3 neon-text">
+              8. 🎯 {{ locale === 'zh' ? '关卡系统' : 'Level System' }}
+            </h3>
+
+            <div class="space-y-4">
+              <div class="bg-gray-800/50 p-3 rounded">
+                <h4 class="text-sm font-bold text-industrial-yellow mb-2 uppercase">
+                  {{ locale === 'zh' ? '关卡概述' : 'Level Overview' }}:
+                </h4>
+                <p class="text-sm text-gray-400 mb-3">
+                  {{ locale === 'zh' ? '游戏采用渐进式关卡系统，随着城市发展，你可以解锁更大的地图和更高级的关卡。每个关卡都有不同的地图大小和独特的挑战。' : 'The game features a progressive level system. As your city develops, you can unlock larger maps and higher levels. Each level has different map sizes and unique challenges.' }}
+                </p>
+              </div>
+
+              <div class="bg-gray-800/50 p-3 rounded">
+                <h4 class="text-sm font-bold text-industrial-yellow mb-2 uppercase">
+                  {{ locale === 'zh' ? '关卡解锁条件' : 'Level Unlock Conditions' }}:
+                </h4>
+                <ul class="text-sm space-y-2">
+                  <li>📊 {{ locale === 'zh' ? '城市指标：需要达到一定的人口、每日收入、稳定度和建筑数量' : 'City Metrics: Need to reach certain population, daily income, stability, and building count' }}</li>
+                  <li>📋 {{ locale === 'zh' ? '任务完成：必须完成当前关卡的所有必需任务' : 'Quest Completion: Must complete all required quests for the current level' }}</li>
+                  <li>💰 {{ locale === 'zh' ? '每日收入：重点关注每日收入而非累计金币，需要建立可持续的经济体系' : 'Daily Income: Focus on daily income rather than cumulative coins, need to build a sustainable economy' }}</li>
+                </ul>
+              </div>
+
+              <div class="bg-gray-800/50 p-3 rounded">
+                <h4 class="text-sm font-bold text-industrial-yellow mb-2 uppercase">
+                  {{ locale === 'zh' ? '关卡特点' : 'Level Features' }}:
+                </h4>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                  <div>
+                    <h5 class="font-bold text-industrial-green mb-1">
+                      🏘️ {{ locale === 'zh' ? '关卡1：新手村' : 'Level 1: Starter Village' }}
+                    </h5>
+                    <ul class="space-y-1 text-gray-400">
+                      <li>{{ locale === 'zh' ? '地图大小：16×16' : 'Map Size: 16×16' }}</li>
+                      <li>{{ locale === 'zh' ? '起始关卡，学习基础操作' : 'Starting level, learn basic operations' }}</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <h5 class="font-bold text-industrial-green mb-1">
+                      🏙️ {{ locale === 'zh' ? '关卡2：繁荣小镇' : 'Level 2: Prosperous Town' }}
+                    </h5>
+                    <ul class="space-y-1 text-gray-400">
+                      <li>{{ locale === 'zh' ? '地图大小：24×24' : 'Map Size: 24×24' }}</li>
+                      <li>{{ locale === 'zh' ? '需要：人口50+，每日收入100+' : 'Requires: Population 50+, Daily Income 100+' }}</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <h5 class="font-bold text-industrial-green mb-1">
+                      🏢 {{ locale === 'zh' ? '关卡3：中型城市' : 'Level 3: Medium City' }}
+                    </h5>
+                    <ul class="space-y-1 text-gray-400">
+                      <li>{{ locale === 'zh' ? '地图大小：32×32' : 'Map Size: 32×32' }}</li>
+                      <li>{{ locale === 'zh' ? '需要：人口200+，每日收入300+' : 'Requires: Population 200+, Daily Income 300+' }}</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <h5 class="font-bold text-industrial-green mb-1">
+                      🌆 {{ locale === 'zh' ? '关卡4+：大型城市' : 'Level 4+: Large City' }}
+                    </h5>
+                    <ul class="space-y-1 text-gray-400">
+                      <li>{{ locale === 'zh' ? '地图更大，挑战更高' : 'Larger maps, higher challenges' }}</li>
+                      <li>{{ locale === 'zh' ? '需要完成更多任务和指标' : 'Requires more quests and metrics' }}</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+
+              <div class="bg-gray-800/50 p-3 rounded">
+                <h4 class="text-sm font-bold text-industrial-yellow mb-2 uppercase">
+                  {{ locale === 'zh' ? '关卡切换提示' : 'Level Switching Tips' }}:
+                </h4>
+                <ul class="text-sm space-y-1">
+                  <li>🔄 {{ locale === 'zh' ? '切换关卡时，当前地图会被清空，但保留你的金币和已完成的任务进度' : 'When switching levels, the current map is cleared, but your coins and completed quest progress are preserved' }}</li>
+                  <li>📋 {{ locale === 'zh' ? '在任务面板中查看下一关卡的解锁条件和进度' : 'Check unlock conditions and progress for the next level in the quest panel' }}</li>
+                  <li>✅ {{ locale === 'zh' ? '满足所有条件后，任务面板会显示"跳转到下一关"按钮' : 'When all conditions are met, the quest panel will show a "Jump to Next Level" button' }}</li>
+                </ul>
+              </div>
+            </div>
+          </section>
+
+          <!-- 成就系统 -->
+          <section>
+            <h3 class="text-lg font-bold text-industrial-accent uppercase tracking-wide mb-3 neon-text">
+              9. 🏆 {{ locale === 'zh' ? '成就系统' : 'Achievement System' }}
+            </h3>
+
+            <div class="space-y-4">
+              <div class="bg-gray-800/50 p-3 rounded">
+                <h4 class="text-sm font-bold text-industrial-yellow mb-2 uppercase">
+                  {{ locale === 'zh' ? '成就概述' : 'Achievement Overview' }}:
+                </h4>
+                <p class="text-sm text-gray-400 mb-3">
+                  {{ locale === 'zh' ? '完成各种挑战可以获得成就，每个成就都会奖励政绩分。累计政绩分可以提升你的身份等级，从村规划局职员逐步晋升到国家规划局局长。' : 'Complete various challenges to earn achievements. Each achievement rewards merit points. Accumulated merit points can upgrade your title, from Village Planning Staff to National Planning Director.' }}
+                </p>
+              </div>
+
+              <div class="bg-gray-800/50 p-3 rounded">
+                <h4 class="text-sm font-bold text-industrial-yellow mb-2 uppercase">
+                  {{ locale === 'zh' ? '成就类型' : 'Achievement Types' }}:
+                </h4>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                  <div>
+                    <h5 class="font-bold text-industrial-green mb-1">
+                      🏗️ {{ locale === 'zh' ? '建造类成就' : 'Building Achievements' }}
+                    </h5>
+                    <ul class="space-y-1 text-gray-400">
+                      <li>{{ locale === 'zh' ? '建造特定数量的建筑' : 'Build specific number of buildings' }}</li>
+                      <li>{{ locale === 'zh' ? '例如：第一座工厂、工业大亨等' : 'E.g.: First Factory, Industrial Tycoon, etc.' }}</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <h5 class="font-bold text-industrial-green mb-1">
+                      💰 {{ locale === 'zh' ? '资源类成就' : 'Resource Achievements' }}
+                    </h5>
+                    <ul class="space-y-1 text-gray-400">
+                      <li>{{ locale === 'zh' ? '累计获得金币、达到每日收入目标' : 'Accumulate coins, reach daily income goals' }}</li>
+                      <li>{{ locale === 'zh' ? '例如：财富积累、日进斗金等' : 'E.g.: Wealth Accumulation, Daily Fortune, etc.' }}</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <h5 class="font-bold text-industrial-green mb-1">
+                      📊 {{ locale === 'zh' ? '指标类成就' : 'Metric Achievements' }}
+                    </h5>
+                    <ul class="space-y-1 text-gray-400">
+                      <li>{{ locale === 'zh' ? '达到特定城市指标' : 'Reach specific city metrics' }}</li>
+                      <li>{{ locale === 'zh' ? '例如：人口大师、稳定度大师等' : 'E.g.: Population Master, Stability Master, etc.' }}</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <h5 class="font-bold text-industrial-green mb-1">
+                      🌟 {{ locale === 'zh' ? '特殊成就' : 'Special Achievements' }}
+                    </h5>
+                    <ul class="space-y-1 text-gray-400">
+                      <li>{{ locale === 'zh' ? '完成特殊挑战' : 'Complete special challenges' }}</li>
+                      <li>{{ locale === 'zh' ? '例如：零污染城市、环保先锋等' : 'E.g.: Zero Pollution City, Environmental Pioneer, etc.' }}</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+
+              <div class="bg-gray-800/50 p-3 rounded">
+                <h4 class="text-sm font-bold text-industrial-yellow mb-2 uppercase">
+                  {{ locale === 'zh' ? '成就稀有度' : 'Achievement Rarity' }}:
+                </h4>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">
+                  <div class="text-center">
+                    <div class="text-gray-400 font-bold mb-1">{{ locale === 'zh' ? '普通' : 'Common' }}</div>
+                    <div class="text-gray-500">10-50 {{ locale === 'zh' ? '政绩分' : 'Merit Points' }}</div>
+                  </div>
+                  <div class="text-center">
+                    <div class="text-blue-400 font-bold mb-1">{{ locale === 'zh' ? '稀有' : 'Rare' }}</div>
+                    <div class="text-blue-500">50-200 {{ locale === 'zh' ? '政绩分' : 'Merit Points' }}</div>
+                  </div>
+                  <div class="text-center">
+                    <div class="text-purple-400 font-bold mb-1">{{ locale === 'zh' ? '史诗' : 'Epic' }}</div>
+                    <div class="text-purple-500">200-500 {{ locale === 'zh' ? '政绩分' : 'Merit Points' }}</div>
+                  </div>
+                  <div class="text-center">
+                    <div class="text-yellow-400 font-bold mb-1">{{ locale === 'zh' ? '传说' : 'Legendary' }}</div>
+                    <div class="text-yellow-500">500-1000 {{ locale === 'zh' ? '政绩分' : 'Merit Points' }}</div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="bg-gray-800/50 p-3 rounded">
+                <h4 class="text-sm font-bold text-industrial-yellow mb-2 uppercase">
+                  {{ locale === 'zh' ? '身份等级系统' : 'Title System' }}:
+                </h4>
+                <p class="text-sm text-gray-400 mb-3">
+                  {{ locale === 'zh' ? '通过累计政绩分，你可以获得不同的身份等级。身份显示在header顶部，悬停可查看详细信息。' : 'By accumulating merit points, you can earn different title ranks. Titles are displayed at the top of the header, hover to view details.' }}
+                </p>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                  <div>
+                    <h5 class="font-bold text-industrial-green mb-1">
+                      🏘️ {{ locale === 'zh' ? '村级（0-1000分）' : 'Village Level (0-1000 pts)' }}
+                    </h5>
+                    <ul class="space-y-1 text-gray-400">
+                      <li>{{ locale === 'zh' ? '村规划局职员' : 'Village Planning Staff' }}</li>
+                      <li>{{ locale === 'zh' ? '村规划局局长' : 'Village Planning Director' }}</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <h5 class="font-bold text-industrial-green mb-1">
+                      🏙️ {{ locale === 'zh' ? '乡镇级（1000-5000分）' : 'Town Level (1000-5000 pts)' }}
+                    </h5>
+                    <ul class="space-y-1 text-gray-400">
+                      <li>{{ locale === 'zh' ? '乡镇规划局职员' : 'Town Planning Staff' }}</li>
+                      <li>{{ locale === 'zh' ? '乡镇规划局局长' : 'Town Planning Director' }}</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <h5 class="font-bold text-industrial-green mb-1">
+                      🏢 {{ locale === 'zh' ? '县级（5000-15000分）' : 'County Level (5000-15000 pts)' }}
+                    </h5>
+                    <ul class="space-y-1 text-gray-400">
+                      <li>{{ locale === 'zh' ? '县规划局职员' : 'County Planning Staff' }}</li>
+                      <li>{{ locale === 'zh' ? '县规划局局长' : 'County Planning Director' }}</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <h5 class="font-bold text-industrial-green mb-1">
+                      🌆 {{ locale === 'zh' ? '市级及以上（15000+分）' : 'City Level+ (15000+ pts)' }}
+                    </h5>
+                    <ul class="space-y-1 text-gray-400">
+                      <li>{{ locale === 'zh' ? '市规划局职员/局长' : 'City Planning Staff/Director' }}</li>
+                      <li>{{ locale === 'zh' ? '省/国家规划局局长' : 'Provincial/National Planning Director' }}</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+
+              <div class="bg-gray-800/50 p-3 rounded">
+                <h4 class="text-sm font-bold text-industrial-yellow mb-2 uppercase">
+                  {{ locale === 'zh' ? '成就查看' : 'Viewing Achievements' }}:
+                </h4>
+                <ul class="text-sm space-y-1">
+                  <li>📋 {{ locale === 'zh' ? '在右侧面板查看最近的成就进度' : 'View recent achievement progress in the right panel' }}</li>
+                  <li>🏆 {{ locale === 'zh' ? '点击"全部"按钮打开成就面板查看所有成就' : 'Click "All" button to open achievement panel and view all achievements' }}</li>
+                  <li>📊 {{ locale === 'zh' ? '成就面板显示完成进度和奖励政绩分' : 'Achievement panel shows completion progress and merit point rewards' }}</li>
+                </ul>
+              </div>
+            </div>
+          </section>
+
           <!-- 游戏小贴士 -->
           <section>
             <h3 class="text-lg font-bold text-industrial-accent uppercase tracking-wide mb-3 neon-text">
-              8. 💡 {{ locale === 'zh' ? '游戏小贴士' : 'Game Tips' }}
+              10. 💡 {{ locale === 'zh' ? '游戏小贴士' : 'Game Tips' }}
             </h3>
 
             <div class="bg-gray-800/50 p-3 rounded">
@@ -400,6 +628,7 @@ function toggleContent() {
                 <li>💰 {{ locale === 'zh' ? '资源平衡：保持人口、就业、金币、满意度、电力等多项资源的平衡' : 'Resource balance: Maintain balance of population, jobs, coins, satisfaction, power, etc.' }}</li>
                 <li>⬆️ {{ locale === 'zh' ? '升级优先级：优先升级产出高、影响大的建筑' : 'Upgrade priority: Prioritize buildings with high output and impact' }}</li>
                 <li>📊 {{ locale === 'zh' ? '关注状态提示：建筑顶部会出现各种状态图标，及时处理可避免损失' : 'Watch status indicators: Various status icons appear on building tops, handle them promptly to avoid losses' }}</li>
+                <li>🎯 {{ locale === 'zh' ? '关注任务和成就：完成任务和成就可以获得金币和政绩分，提升身份等级' : 'Focus on quests and achievements: Complete quests and achievements to earn coins and merit points, upgrade your title' }}</li>
                 <li>💾 {{ locale === 'zh' ? '自动保存：游戏自动保存，无需担心丢失进度' : 'Auto-save: Game auto-saves, no need to worry about losing progress' }}</li>
                 <li>🎮 {{ locale === 'zh' ? '享受过程：城市建设是一个渐进的过程，享受每一步的成长' : 'Enjoy the process: City building is a gradual process, enjoy every step of growth' }}</li>
                 <li>⚡ {{ locale === 'zh' ? '性能优化：建议在 chrome://flags 中开启 GPU 加速以获得更好的游戏体验' : 'Performance optimization: Enable GPU acceleration in chrome://flags for better gaming experience' }}</li>

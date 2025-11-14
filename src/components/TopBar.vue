@@ -81,10 +81,6 @@ function toggleLang() {
   gameState.setLanguage(language.value === 'zh' ? 'en' : 'zh')
 }
 
-function toggleMapOverview() {
-  gameState.setShowMapOverview(!showMapOverview.value)
-}
-
 function toggleQuestPanel() {
   gameState.setShowQuestPanel(!showQuestPanel.value)
 }
@@ -289,14 +285,7 @@ function showGuideModal() {
             </div>
           </div>
 
-          <button
-            class="px-3 col-span-2 py-1 rounded bg-industrial-accent text-white text-sm font-bold shadow hover:bg-industrial-accent/80 transition"
-            @click="toggleMapOverview"
-          >
-            {{ language === 'zh' ? (showMapOverview ? '🗺️ 隐藏' : '🗺️ 地图') : (showMapOverview ? '🗺️ Hide' : '🗺️ Map') }}
-          </button>
-
-          <!-- 第三行：任务按钮 -->
+          <!-- 任务按钮 -->
           <button
             class="px-3 col-span-3 py-1 rounded bg-purple-600 text-white text-sm font-bold shadow hover:bg-purple-500 transition"
             @click="toggleQuestPanel"
