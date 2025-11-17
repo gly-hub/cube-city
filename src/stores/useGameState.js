@@ -3,6 +3,7 @@ import { getEffectiveBuildingValue } from '@/js/utils/building-interaction-utils
 import { defineStore } from 'pinia'
 import { getTitleByMeritPoints } from '@/constants/title-config.js'
 import { eventBus } from '@/js/utils/event-bus.js'
+import { calculateAllSystemStatus, calculateIncomeMultiplier } from '@/js/utils/system-status.js'
 
 export const useGameState = defineStore('gameState', {
   state: () => ({
@@ -60,14 +61,53 @@ export const useGameState = defineStore('gameState', {
     // 政绩分和身份系统
     meritPoints: 0, // 累计政绩分
     currentTitle: 'village_staff', // 当前身份ID
+
+    // 科技系统状态
+    buildingTechs: {}, // 建筑科技研发状态 { 'x,y': ['tech_id1', 'tech_id2'] }
+    showTechTreePanel: false, // 是否显示科技树面板
+    selectedBuildingForTech: null, // 当前选中用于科技研发的建筑位置 { x, y }
   }),
   getters: {
     /**
-     * 计算每日总收入（直接使用metadata中的detail，大幅提升性能）
+     * 计算系统状态（需要先计算基础数据）
+     * @param {object} state - 游戏状态
+     * @returns {object} 系统状态 { power, transport, security, environment }
+     */
+    systemStatus(state) {
+      // 先计算基础数据（避免循环依赖）
+      let totalPower = 0
+      let totalPowerUsage = 0
+      let totalPollution = 0
+
+      state.metadata.forEach((row, x) => {
+        row.forEach((tile, y) => {
+          if (tile.building && tile.detail) {
+            const power = getEffectiveBuildingValue(state, x, y, 'powerOutput')
+            const powerUsage = getEffectiveBuildingValue(state, x, y, 'powerUsage')
+            const pollution = getEffectiveBuildingValue(state, x, y, 'pollution')
+            totalPower += power
+            // powerUsage是正数（消耗值）
+            totalPowerUsage += powerUsage || 0
+            totalPollution += pollution
+          }
+        })
+      })
+
+      return calculateAllSystemStatus({
+        metadata: state.metadata,
+        power: totalPowerUsage,
+        maxPower: totalPower,
+        stability: state.stability,
+        pollution: totalPollution,
+        citySize: state.citySize,
+      })
+    },
+    /**
+     * 计算每日总收入（受系统状态影响）
      * @param {object} state - 游戏状态
      * @returns {number} 总收入
      */
-    dailyIncome: (state) => {
+    dailyIncome(state) {
       let totalIncome = 0
 
       state.metadata.forEach((row, x) => {
@@ -80,7 +120,36 @@ export const useGameState = defineStore('gameState', {
         })
       })
 
-      return totalIncome
+      // 应用系统状态影响（避免循环依赖，直接计算基础数据）
+      let totalPower = 0
+      let totalPowerUsage = 0
+      let totalPollution = 0
+
+      state.metadata.forEach((row, x) => {
+        row.forEach((tile, y) => {
+          if (tile.building && tile.detail) {
+            const power = getEffectiveBuildingValue(state, x, y, 'powerOutput')
+            const powerUsage = getEffectiveBuildingValue(state, x, y, 'powerUsage')
+            const pollution = getEffectiveBuildingValue(state, x, y, 'pollution')
+            totalPower += power
+            // powerUsage是正数（消耗值）
+            totalPowerUsage += powerUsage || 0
+            totalPollution += pollution
+          }
+        })
+      })
+
+      const systemStatus = calculateAllSystemStatus({
+        metadata: state.metadata,
+        power: totalPowerUsage,
+        maxPower: totalPower,
+        stability: state.stability,
+        pollution: totalPollution,
+        citySize: state.citySize,
+      })
+      const incomeMultiplier = calculateIncomeMultiplier(systemStatus)
+
+      return Math.floor(totalIncome * incomeMultiplier)
     },
     /**
      * 计算总人口容量（优化：直接使用detail，仅对有相互作用的建筑计算修正）
@@ -290,7 +359,33 @@ export const useGameState = defineStore('gameState', {
     },
     setTile(x, y, patch) {
       // 合并 patch 到指定 tile
-      Object.assign(this.metadata[x][y], patch)
+      // 对于嵌套对象（如 detail），需要创建新对象以确保响应式更新
+      const tile = this.metadata[x][y]
+      if (patch.detail && typeof patch.detail === 'object') {
+        // 如果更新的是 detail，创建新对象，确保所有属性都被复制
+        patch = { 
+          ...patch, 
+          detail: { 
+            ...patch.detail,
+            // 显式复制所有属性，确保响应式追踪
+            coinOutput: patch.detail.coinOutput,
+            powerOutput: patch.detail.powerOutput,
+            powerUsage: patch.detail.powerUsage,
+            pollution: patch.detail.pollution,
+            maxPopulation: patch.detail.maxPopulation,
+            population: patch.detail.population,
+          } 
+        }
+      }
+      // 使用 Object.assign 更新，但确保是替换而不是合并
+      Object.keys(patch).forEach(key => {
+        if (key === 'detail' && patch[key]) {
+          // detail 对象完全替换
+          tile[key] = patch[key]
+        } else {
+          tile[key] = patch[key]
+        }
+      })
     },
     updateTile(x, y, patch) {
       // 语义同 setTile，便于扩展
@@ -462,6 +557,31 @@ export const useGameState = defineStore('gameState', {
       return getTitleByMeritPoints(this.meritPoints)
     },
 
+    // 科技系统相关方法
+    getBuildingTechs(x, y) {
+      const key = `${x},${y}`
+      return this.buildingTechs[key] || []
+    },
+    setBuildingTechs(x, y, techIds) {
+      const key = `${x},${y}`
+      this.buildingTechs[key] = techIds
+    },
+    addBuildingTech(x, y, techId) {
+      const key = `${x},${y}`
+      if (!this.buildingTechs[key]) {
+        this.buildingTechs[key] = []
+      }
+      if (!this.buildingTechs[key].includes(techId)) {
+        this.buildingTechs[key].push(techId)
+      }
+    },
+    setShowTechTreePanel(show) {
+      this.showTechTreePanel = show
+    },
+    setSelectedBuildingForTech(position) {
+      this.selectedBuildingForTech = position
+    },
+
     // 扩展地图大小（保留原有数据）
     expandMap(newSize) {
       const oldSize = this.citySize
@@ -507,6 +627,11 @@ export const useGameState = defineStore('gameState', {
       // 清空选中状态
       this.selectedBuilding = null
       this.selectedPosition = null
+      
+      // 清空科技系统状态
+      this.buildingTechs = {}
+      this.showTechTreePanel = false
+      this.selectedBuildingForTech = null
     },
   },
   persist: true, // 启用持久化

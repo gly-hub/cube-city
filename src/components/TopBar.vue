@@ -8,9 +8,16 @@ import AnimatedNumber from './AnimatedNumber.vue'
 import AudioManager from './AudioManager.vue'
 import GuideModal from './GuideModal.vue'
 import { getNextTitle } from '@/constants/title-config.js'
+import { SYSTEM_STATUS_LEVELS } from '@/js/utils/system-status.js'
 
 const gameState = useGameState()
-const { credits, totalJobs, maxPopulation, territory, citySize, cityLevel, cityName, language, showMapOverview, gameDay, power, maxPower, musicEnabled, musicVolume, isPlayingMusic, showQuestPanel, meritPoints, buildingCount, dailyIncome, pollution, stability } = storeToRefs(gameState)
+const { credits, totalJobs, maxPopulation, territory, citySize, cityLevel, cityName, language, showMapOverview, gameDay, power, maxPower, musicEnabled, musicVolume, isPlayingMusic, showQuestPanel, meritPoints, buildingCount, dailyIncome, pollution, stability, systemStatus } = storeToRefs(gameState)
+
+// 系统状态显示
+const powerStatus = computed(() => SYSTEM_STATUS_LEVELS[systemStatus.value.power] || SYSTEM_STATUS_LEVELS[3])
+const transportStatus = computed(() => SYSTEM_STATUS_LEVELS[systemStatus.value.transport] || SYSTEM_STATUS_LEVELS[3])
+const securityStatus = computed(() => SYSTEM_STATUS_LEVELS[systemStatus.value.security] || SYSTEM_STATUS_LEVELS[3])
+const environmentStatus = computed(() => SYSTEM_STATUS_LEVELS[systemStatus.value.environment] || SYSTEM_STATUS_LEVELS[3])
 
 // 当前身份
 const currentTitle = computed(() => gameState.getCurrentTitle())
@@ -341,29 +348,37 @@ function showGuideModal() {
           <span class="text-xs text-gray-400 uppercase" :class="language === 'zh' ? 'tracking-[0.2rem]' : 'tracking-wide'">
             {{ $t('dashboardFooter.powerGrid') }}:
           </span>
-          <div class="status-indicator status-online" />
-          <span class="text-xs text-industrial-green uppercase">{{ $t('dashboardFooter.online') }}</span>
+          <div class="status-indicator" :class="powerStatus.indicatorClass" />
+          <span class="text-xs uppercase" :class="powerStatus.color">
+            {{ language === 'zh' ? powerStatus.zh : powerStatus.en }}
+          </span>
         </div>
         <div class="flex items-center space-x-1.5">
           <span class="text-xs text-gray-400 uppercase" :class="language === 'zh' ? 'tracking-[0.2rem]' : 'tracking-wide'">
             {{ $t('dashboardFooter.transport') }}:
           </span>
-          <div class="status-indicator status-warning" />
-          <span class="text-xs text-industrial-yellow uppercase">{{ $t('dashboardFooter.limited') }}</span>
+          <div class="status-indicator" :class="transportStatus.indicatorClass" />
+          <span class="text-xs uppercase" :class="transportStatus.color">
+            {{ language === 'zh' ? transportStatus.zh : transportStatus.en }}
+          </span>
         </div>
         <div class="flex items-center space-x-1.5">
           <span class="text-xs text-gray-400 uppercase" :class="language === 'zh' ? 'tracking-[0.2rem]' : 'tracking-wide'">
             {{ $t('dashboardFooter.security') }}:
           </span>
-          <div class="status-indicator status-online" />
-          <span class="text-xs text-industrial-green uppercase">{{ $t('dashboardFooter.secure') }}</span>
+          <div class="status-indicator" :class="securityStatus.indicatorClass" />
+          <span class="text-xs uppercase" :class="securityStatus.color">
+            {{ language === 'zh' ? securityStatus.zh : securityStatus.en }}
+          </span>
         </div>
         <div class="flex items-center space-x-1.5">
           <span class="text-xs text-gray-400 uppercase" :class="language === 'zh' ? 'tracking-[0.2rem]' : 'tracking-wide'">
             {{ $t('dashboardFooter.environment') }}:
           </span>
-          <div class="status-indicator status-warning" />
-          <span class="text-xs text-industrial-yellow uppercase">{{ $t('dashboardFooter.moderate') }}</span>
+          <div class="status-indicator" :class="environmentStatus.indicatorClass" />
+          <span class="text-xs uppercase" :class="environmentStatus.color">
+            {{ language === 'zh' ? environmentStatus.zh : environmentStatus.en }}
+          </span>
         </div>
       </div>
     </div>

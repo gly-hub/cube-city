@@ -62,10 +62,14 @@ export const LEVEL_CONFIGS = [
     },
     unlockConditions: {
       cityMetrics: {
-        minPopulation: 50,
-        minDailyIncome: 100,
-        minStability: 60,
-        minBuildingCount: 10,
+        // 基于关卡1 (16×16) 的最优值计算（考虑道路约束）
+        // 实际道路占用约35%（90格），可用建筑166格
+        // 关卡1最优：人口4,080，每日收入20,013，建筑256
+        // 采用65%难度，确保有挑战性但可达
+        minPopulation: 2650, // 约65%最优值
+        minDailyIncome: 13000, // 约65%最优值
+        minStability: 65,
+        minBuildingCount: 166, // 约65%最优值（考虑道路占用）
       },
       requiredQuests: ['quest_001', 'quest_002'],
     },
@@ -86,10 +90,12 @@ export const LEVEL_CONFIGS = [
     },
     unlockConditions: {
       cityMetrics: {
-        minPopulation: 150,
-        minDailyIncome: 300,
+        // 基于关卡2 (24×24) 的最优值计算，70%难度
+        // 关卡2最优：人口11,620，每日收入56,940，建筑576
+        minPopulation: 5000, // 约43%最优值
+        minDailyIncome: 25000, // 约44%最优值
         minStability: 70,
-        minBuildingCount: 25,
+        minBuildingCount: 280, // 约49%最优值
       },
       requiredQuests: ['quest_003', 'quest_004', 'quest_005'],
     },
@@ -110,10 +116,12 @@ export const LEVEL_CONFIGS = [
     },
     unlockConditions: {
       cityMetrics: {
-        minPopulation: 300,
-        minDailyIncome: 600,
+        // 基于关卡3 (32×32) 的最优值计算，70%难度
+        // 关卡3最优：人口20,660，每日收入101,222，建筑1,024
+        minPopulation: 10000, // 约48%最优值
+        minDailyIncome: 50000, // 约49%最优值
         minStability: 75,
-        minBuildingCount: 50,
+        minBuildingCount: 500, // 约49%最优值
       },
       requiredQuests: ['quest_006', 'quest_007', 'quest_008', 'quest_009'],
     },
@@ -134,10 +142,12 @@ export const LEVEL_CONFIGS = [
     },
     unlockConditions: {
       cityMetrics: {
-        minPopulation: 500,
-        minDailyIncome: 1000,
+        // 基于关卡4 (40×40) 的最优值计算，70%难度
+        // 关卡4最优：人口32,280，每日收入158,163，建筑1,600
+        minPopulation: 15000, // 约46%最优值
+        minDailyIncome: 80000, // 约51%最优值
         minStability: 80,
-        minBuildingCount: 80,
+        minBuildingCount: 780, // 约49%最优值
       },
       requiredQuests: ['quest_010', 'quest_011', 'quest_012'],
     },

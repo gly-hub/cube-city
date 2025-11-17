@@ -15,6 +15,7 @@ import World from './world/world.js'
 import LevelSystem from './utils/level-system.js'
 import QuestSystem from './utils/quest-system.js'
 import AchievementSystem from './utils/achievement-system.js'
+import TechSystem from './utils/tech-system.js'
 
 let instance
 
@@ -49,15 +50,20 @@ export default class Experience {
     this.world = new World()
     this.gameState = useGameState()
 
-    // 初始化关卡系统、任务系统和成就系统
+    // 初始化关卡系统、任务系统、成就系统和科技系统
     this.levelSystem = new LevelSystem()
     this.questSystem = new QuestSystem()
     this.achievementSystem = new AchievementSystem()
+    this.techSystem = new TechSystem()
+    
+    // 初始化科技系统
+    this.techSystem.init(this.gameState)
     
     // 将系统挂载到全局，方便访问
     window.levelSystem = this.levelSystem
     window.questSystem = this.questSystem
     window.achievementSystem = this.achievementSystem
+    window.techSystem = this.techSystem
 
     // 启动关卡检测
     this.levelSystem.start()
@@ -71,6 +77,9 @@ export default class Experience {
         }
         if (this.achievementSystem) {
           this.achievementSystem.refreshAllAchievements()
+        }
+        if (this.techSystem) {
+          this.techSystem.refreshAllTechEffects()
         }
       }, 500)
     })

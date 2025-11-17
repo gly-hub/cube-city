@@ -15,6 +15,7 @@ import TopBar from './components/TopBar.vue'
 import QuestPanel from './components/QuestPanel.vue'
 import LevelUnlockModal from './components/LevelUnlockModal.vue'
 import AchievementPanel from './components/AchievementPanel.vue'
+import TechTreePanel from './components/TechTreePanel.vue'
 import { useBuilding } from './hooks/useBuilding.js'
 
 const showDialog = ref(false)
@@ -141,6 +142,7 @@ onUnmounted(() => {
     <QuestPanel />
     <LevelUnlockModal />
     <AchievementPanel />
+    <TechTreePanel />
   </div>
   <GameCanvas />
 </template>

@@ -1,7 +1,8 @@
 <script setup>
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-// 只定义 props，不赋值变量
+import { useGameState } from '@/stores/useGameState'
+import { getTechsByBuildingType } from '@/constants/tech-tree-config.js'
 
 const _props = defineProps({
   building: { type: Object, required: true },
@@ -17,6 +18,58 @@ const _props = defineProps({
 
 const _emit = defineEmits(['upgrade', 'repair', 'demolish'])
 const { t, locale } = useI18n()
+const gameState = useGameState()
+
+// 检查是否可以显示科技树按钮
+const canShowTechTree = computed(() => {
+  if (!_props.building.type) {
+    return false
+  }
+  
+  // 检查该建筑类型是否有科技树配置
+  const techs = getTechsByBuildingType(_props.building.type)
+  if (techs.length === 0) {
+    return false
+  }
+  
+  // 如果建筑是3级（最高级），可以显示科技树
+  if (_props.building.level === 3) {
+    return true
+  }
+  
+  // 如果建筑没有升级选项（nextLevel为null），视为最高级，也可以显示科技树
+  // 这样不能升级的建筑（如垃圾站、核电站等）也能使用科技树
+  if (_props.building.nextLevel === null) {
+    return true
+  }
+  
+  return false
+})
+
+// 打开科技树面板
+function openTechTree() {
+  // selectedPosition 可能是 { x, z } 或 { x, y }，需要兼容处理
+  const pos = _props.selectedPosition
+  if (!pos) {
+    console.error('No selected position')
+    return
+  }
+  
+  const buildingPos = {
+    x: pos.x,
+    y: pos.z !== undefined ? pos.z : pos.y,
+  }
+  
+  console.log('Opening tech tree for building at:', buildingPos, 'type:', _props.building.type)
+  
+  gameState.setSelectedBuildingForTech(buildingPos)
+  gameState.setShowTechTreePanel(true)
+  
+  console.log('Tech tree panel state:', {
+    showTechTreePanel: gameState.showTechTreePanel,
+    selectedBuildingForTech: gameState.selectedBuildingForTech,
+  })
+}
 
 const nextLevelData = computed(() => {
   if (_props.building.nextLevel && _props.building.levels) {
@@ -209,6 +262,14 @@ const upgradeImprovements = computed(() => {
         disabled
       >
         ⬆️ {{ t('buildingDetails.upgradeUnit') }} ({{ locale === 'zh' ? '已达最高级' : 'Max Level' }})
+      </button>
+      <!-- 科技树按钮（仅3级建筑显示） -->
+      <button
+        v-if="!nextLevelData && canShowTechTree"
+        class="industrial-button w-full text-white font-bold py-3 px-4 text-sm uppercase tracking-wide bg-industrial-blue hover:bg-industrial-blue/80 transition"
+        @click="openTechTree"
+      >
+        🔬 {{ locale === 'zh' ? '科技树' : 'Tech Tree' }}
       </button>
       <button class="industrial-button w-full text-white font-bold py-3 px-4 text-sm uppercase tracking-wide" @click="$emit('repair')">
         🔧 {{ t('buildingDetails.maintenanceBtn') }}

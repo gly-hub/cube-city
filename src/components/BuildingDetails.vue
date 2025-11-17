@@ -13,19 +13,51 @@ const selectedBuilding = computed(() => gameState.selectedBuilding)
 const currentMode = computed(() => gameState.currentMode)
 const selectedPosition = computed(() => gameState.selectedPosition)
 const building = computed(() => {
-  if (!selectedBuilding.value)
+  if (!selectedBuilding.value || !selectedPosition.value)
     return {}
   const { type, level } = selectedBuilding.value
+  
+  // 从 metadata 获取实际的 detail（包含科技效果）
+  // 注意：需要访问 metadata 来触发响应式追踪
+  const pos = selectedPosition.value
+  const x = pos.x
+  const y = pos.z !== undefined ? pos.z : pos.y
+  
+  // 直接访问 metadata 数组，确保响应式追踪
+  // 使用 storeToRefs 的 metadata 来确保响应式
+  const tile = metadata.value[x]?.[y]
+  
+  // 优先使用 metadata 中的 detail（包含科技效果），如果没有则使用原始数据
   const base = BUILDING_DATA[type] || {}
-  const levelData = base.levels?.[level] || {}
+  
+  // 如果 tile 存在且有 detail，使用 detail（包含科技效果）
+  // 否则使用原始数据
+  let levelData = {}
+  if (tile?.detail) {
+    // 创建 detail 的深拷贝，确保所有属性都被包含
+    levelData = {
+      ...tile.detail,
+      // 确保所有可能的属性都被包含
+      coinOutput: tile.detail.coinOutput,
+      powerOutput: tile.detail.powerOutput,
+      powerUsage: tile.detail.powerUsage,
+      pollution: tile.detail.pollution,
+      maxPopulation: tile.detail.maxPopulation,
+      population: tile.detail.population,
+    }
+  } else {
+    levelData = base.levels?.[level] || {}
+  }
+  
   // 确保包含 nextLevel 和 levels 属性，用于升级功能
   return { 
     ...base, 
     ...levelData, 
+    type, // 确保包含 type
     level,
-    nextLevel: levelData.nextLevel || null,
+    nextLevel: levelData.nextLevel || base.levels?.[level]?.nextLevel || null,
     levels: base.levels || {},
-    upgradeCost: levelData.upgradeCost || null,
+    upgradeCost: levelData.upgradeCost || base.levels?.[level]?.upgradeCost || null,
   }
 })
 

@@ -234,6 +234,28 @@ export function confirmUpgrade(ctx) {
     outputFactor: BUILDING_DATA[newBuilding.type]?.levels[newBuilding.level]?.outputFactor || 1,
   })
 
+  // 更新 selectedBuilding 状态，确保UI显示正确的等级
+  ctx.gameState.setSelectedBuilding({ 
+    type: newBuilding.type, 
+    level: newBuilding.level 
+  })
+
+  // 如果升级到3级，需要重新应用已研发的科技效果
+  if (newBuilding.level === 3 && window.techSystem) {
+    const researchedTechs = ctx.gameState.getBuildingTechs(ctx.selected.x, ctx.selected.y)
+    if (researchedTechs && researchedTechs.length > 0) {
+      // 动态导入 getTechById
+      import('@/constants/tech-tree-config.js').then(({ getTechById }) => {
+        researchedTechs.forEach(techId => {
+          const tech = getTechById(techId)
+          if (tech) {
+            window.techSystem.applyTechEffects(ctx.selected.x, ctx.selected.y, tech)
+          }
+        })
+      })
+    }
+  }
+
   // 触发建筑升级事件（用于任务系统）
   eventBus.emit('building:upgraded', {
     building: { type: newBuilding.type, level: newBuilding.level },

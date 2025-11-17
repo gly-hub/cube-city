@@ -307,26 +307,231 @@ function toggleContent() {
               5. 💰 {{ locale === 'zh' ? '资源管理系统' : 'Resource Management' }}
             </h3>
 
-            <div class="bg-gray-800/50 p-3 rounded">
-              <h4 class="text-sm font-bold text-industrial-yellow mb-2 uppercase">
-                {{ locale === 'zh' ? '主要资源' : 'Main Resources' }}:
-              </h4>
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
-                <div class="flex items-center space-x-2">
-                  <span class="text-industrial-green text-lg">💰</span>
-                  <span>{{ locale === 'zh' ? '金币：建造、升级、扩地' : 'Coins: Build, upgrade, expand' }}</span>
+            <div class="space-y-4">
+              <!-- 主要资源 -->
+              <div class="bg-gray-800/50 p-3 rounded">
+                <h4 class="text-sm font-bold text-industrial-yellow mb-2 uppercase">
+                  {{ locale === 'zh' ? '主要资源' : 'Main Resources' }}:
+                </h4>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                  <div class="flex items-center space-x-2">
+                    <span class="text-industrial-green text-lg">💰</span>
+                    <span>{{ locale === 'zh' ? '金币：建造、升级、扩地' : 'Coins: Build, upgrade, expand' }}</span>
+                  </div>
+                  <div class="flex items-center space-x-2">
+                    <span class="text-industrial-blue text-lg">👥</span>
+                    <span>{{ locale === 'zh' ? '人口：住宅容量决定' : 'Population: Determined by housing capacity' }}</span>
+                  </div>
+                  <div class="flex items-center space-x-2">
+                    <span class="text-industrial-yellow text-lg">⚡</span>
+                    <span>{{ locale === 'zh' ? '电力：建筑消耗，需发电厂' : 'Power: Building consumption, needs power plants' }}</span>
+                  </div>
+                  <div class="flex items-center space-x-2">
+                    <span class="text-gray-400 text-lg">🌫️</span>
+                    <span>{{ locale === 'zh' ? '污染：工业产生，环境建筑降低' : 'Pollution: Industrial production, environmental buildings reduce' }}</span>
+                  </div>
+                  <div class="flex items-center space-x-2">
+                    <span class="text-industrial-green text-lg">📊</span>
+                    <span>{{ locale === 'zh' ? '稳定度：影响城市运行' : 'Stability: Affects city operation' }}</span>
+                  </div>
+                  <div class="flex items-center space-x-2">
+                    <span class="text-industrial-blue text-lg">📈</span>
+                    <span>{{ locale === 'zh' ? '每日收入：建筑产出总和' : 'Daily Income: Sum of building outputs' }}</span>
+                  </div>
                 </div>
-                <div class="flex items-center space-x-2">
-                  <span class="text-industrial-blue text-lg">👥</span>
-                  <span>{{ locale === 'zh' ? '人口：住宅容量决定' : 'Population: Determined by housing capacity' }}</span>
+              </div>
+
+              <!-- 系统状态影响 -->
+              <div class="bg-gray-800/50 p-3 rounded">
+                <h4 class="text-sm font-bold text-industrial-yellow mb-2 uppercase">
+                  {{ locale === 'zh' ? '系统状态对收入的影响' : 'System Status Impact on Income' }}:
+                </h4>
+                <p class="text-sm text-gray-400 mb-3">
+                  {{ locale === 'zh' ? '游戏中有四个核心系统状态，它们会动态影响每日收入。系统状态分为5个等级：优秀(+10%)、良好(0%)、适中(-10%)、受限(-25%)、严重(-50%)。最终收入 = 基础收入 × 平均影响倍数。' : 'There are four core system statuses that dynamically affect daily income. System status has 5 levels: Excellent (+10%), Good (0%), Moderate (-10%), Limited (-25%), Critical (-50%). Final Income = Base Income × Average Multiplier.' }}
+                </p>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                  <div>
+                    <h5 class="font-bold text-industrial-green mb-1">
+                      ⚡ {{ locale === 'zh' ? '电网系统' : 'Power Grid' }}
+                    </h5>
+                    <ul class="space-y-1 text-gray-400">
+                      <li>{{ locale === 'zh' ? '计算：耗电量/发电量比例' : 'Calculation: Power usage / Power output ratio' }}</li>
+                      <li>{{ locale === 'zh' ? '≤50%：优秀，≥70%：良好' : '≤50%: Excellent, ≥70%: Good' }}</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <h5 class="font-bold text-industrial-green mb-1">
+                      🛣️ {{ locale === 'zh' ? '交通系统' : 'Transport' }}
+                    </h5>
+                    <ul class="space-y-1 text-gray-400">
+                      <li>{{ locale === 'zh' ? '计算：最长连通道路/总道路数' : 'Calculation: Longest connected roads / Total roads' }}</li>
+                      <li>{{ locale === 'zh' ? '≥90%：优秀，≥70%：良好' : '≥90%: Excellent, ≥70%: Good' }}</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <h5 class="font-bold text-industrial-green mb-1">
+                      🛡️ {{ locale === 'zh' ? '安全系统' : 'Security' }}
+                    </h5>
+                    <ul class="space-y-1 text-gray-400">
+                      <li>{{ locale === 'zh' ? '计算：基于城市稳定度' : 'Calculation: Based on city stability' }}</li>
+                      <li>{{ locale === 'zh' ? '≥90：优秀，≥75：良好' : '≥90: Excellent, ≥75: Good' }}</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <h5 class="font-bold text-industrial-green mb-1">
+                      🌍 {{ locale === 'zh' ? '环境系统' : 'Environment' }}
+                    </h5>
+                    <ul class="space-y-1 text-gray-400">
+                      <li>{{ locale === 'zh' ? '计算：污染值/阈值比例' : 'Calculation: Pollution / Threshold ratio' }}</li>
+                      <li>{{ locale === 'zh' ? '≤20%：优秀，≤40%：良好' : '≤20%: Excellent, ≤40%: Good' }}</li>
+                    </ul>
+                  </div>
                 </div>
-                <div class="flex items-center space-x-2">
-                  <span class="text-industrial-yellow text-lg">⚡</span>
-                  <span>{{ locale === 'zh' ? '电力：建筑消耗，需发电厂' : 'Power: Building consumption, needs power plants' }}</span>
+                <div class="mt-3 p-2 bg-gray-900/50 rounded text-xs text-gray-400">
+                  💡 {{ locale === 'zh' ? '提示：在header顶部可以实时查看四个系统状态，保持系统良好运行可以最大化收入！' : 'Tip: View the four system statuses in real-time at the top of the header. Keep systems running well to maximize income!' }}
                 </div>
-                <div class="flex items-center space-x-2">
-                  <span class="text-gray-400 text-lg">🌫️</span>
-                  <span>{{ locale === 'zh' ? '污染：工业产生，环境建筑降低' : 'Pollution: Industrial production, environmental buildings reduce' }}</span>
+              </div>
+            </div>
+          </section>
+
+          <!-- 任务系统 -->
+          <section>
+            <h3 class="text-lg font-bold text-industrial-accent uppercase tracking-wide mb-3 neon-text">
+              6. 📋 {{ locale === 'zh' ? '任务系统' : 'Quest System' }}
+            </h3>
+
+            <div class="space-y-4">
+              <div class="bg-gray-800/50 p-3 rounded">
+                <h4 class="text-sm font-bold text-industrial-yellow mb-2 uppercase">
+                  {{ locale === 'zh' ? '任务概述' : 'Quest Overview' }}:
+                </h4>
+                <p class="text-sm text-gray-400 mb-3">
+                  {{ locale === 'zh' ? '任务系统是游戏进程的核心，通过完成任务可以推进游戏发展、解锁新关卡。任务分为主线任务和支线任务，完成主线任务是解锁下一关卡的必要条件。' : 'The quest system is the core of game progression. Completing quests advances the game and unlocks new levels. Quests are divided into main quests and side quests. Completing main quests is necessary to unlock the next level.' }}
+                </p>
+              </div>
+
+              <div class="bg-gray-800/50 p-3 rounded">
+                <h4 class="text-sm font-bold text-industrial-yellow mb-2 uppercase">
+                  {{ locale === 'zh' ? '任务类型' : 'Quest Types' }}:
+                </h4>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                  <div>
+                    <h5 class="font-bold text-industrial-green mb-1">
+                      🎯 {{ locale === 'zh' ? '主线任务' : 'Main Quests' }}
+                    </h5>
+                    <ul class="space-y-1 text-gray-400">
+                      <li>{{ locale === 'zh' ? '必须完成才能解锁下一关卡' : 'Must complete to unlock next level' }}</li>
+                      <li>{{ locale === 'zh' ? '通常涉及城市指标要求' : 'Usually involve city metric requirements' }}</li>
+                      <li>{{ locale === 'zh' ? '完成后获得金币奖励' : 'Reward coins upon completion' }}</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <h5 class="font-bold text-industrial-green mb-1">
+                      ⭐ {{ locale === 'zh' ? '支线任务' : 'Side Quests' }}
+                    </h5>
+                    <ul class="space-y-1 text-gray-400">
+                      <li>{{ locale === 'zh' ? '可选完成，提供额外奖励' : 'Optional, provides extra rewards' }}</li>
+                      <li>{{ locale === 'zh' ? '帮助玩家了解游戏机制' : 'Helps players understand game mechanics' }}</li>
+                      <li>{{ locale === 'zh' ? '完成后获得金币和政绩分' : 'Rewards coins and merit points' }}</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+
+              <div class="bg-gray-800/50 p-3 rounded">
+                <h4 class="text-sm font-bold text-industrial-yellow mb-2 uppercase">
+                  {{ locale === 'zh' ? '任务查看' : 'Viewing Quests' }}:
+                </h4>
+                <ul class="text-sm space-y-1">
+                  <li>📋 {{ locale === 'zh' ? '点击header中的"任务"按钮打开任务面板' : 'Click the "Quests" button in the header to open the quest panel' }}</li>
+                  <li>📊 {{ locale === 'zh' ? '任务面板显示当前任务进度和完成条件' : 'Quest panel shows current quest progress and completion conditions' }}</li>
+                  <li>✅ {{ locale === 'zh' ? '完成任务后会自动获得奖励' : 'Rewards are automatically given upon quest completion' }}</li>
+                  <li>🎯 {{ locale === 'zh' ? '满足关卡解锁条件后，可以跳转到下一关卡' : 'When level unlock conditions are met, you can jump to the next level' }}</li>
+                </ul>
+              </div>
+            </div>
+          </section>
+
+          <!-- 科技树系统 -->
+          <section>
+            <h3 class="text-lg font-bold text-industrial-accent uppercase tracking-wide mb-3 neon-text">
+              7. 🔬 {{ locale === 'zh' ? '科技树系统' : 'Tech Tree System' }}
+            </h3>
+
+            <div class="space-y-4">
+              <div class="bg-gray-800/50 p-3 rounded">
+                <h4 class="text-sm font-bold text-industrial-yellow mb-2 uppercase">
+                  {{ locale === 'zh' ? '科技树概述' : 'Tech Tree Overview' }}:
+                </h4>
+                <p class="text-sm text-gray-400 mb-3">
+                  {{ locale === 'zh' ? '当建筑升级到3级（最高级）时，可以解锁该建筑的科技树。通过研发科技，可以进一步提升建筑的产出、降低污染、提升稳定度等。每个建筑都有独特的科技树，科技之间有依赖关系。' : 'When a building is upgraded to level 3 (maximum), you can unlock its tech tree. By researching technologies, you can further improve building output, reduce pollution, increase stability, etc. Each building has a unique tech tree with dependencies between technologies.' }}
+                </p>
+              </div>
+
+              <div class="bg-gray-800/50 p-3 rounded">
+                <h4 class="text-sm font-bold text-industrial-yellow mb-2 uppercase">
+                  {{ locale === 'zh' ? '如何使用科技树' : 'How to Use Tech Tree' }}:
+                </h4>
+                <ol class="text-sm space-y-2 list-decimal list-inside">
+                  <li>{{ locale === 'zh' ? '将建筑升级到3级（最高级）' : 'Upgrade building to level 3 (maximum)' }}</li>
+                  <li>{{ locale === 'zh' ? '选中该建筑，在详情面板中点击"科技树"按钮' : 'Select the building and click the "Tech Tree" button in the detail panel' }}</li>
+                  <li>{{ locale === 'zh' ? '在科技树面板中查看可研发的科技' : 'View researchable technologies in the tech tree panel' }}</li>
+                  <li>{{ locale === 'zh' ? '满足条件后（有足够金币、完成前置科技），点击"研发"按钮' : 'When conditions are met (enough coins, prerequisites completed), click "Research" button' }}</li>
+                  <li>{{ locale === 'zh' ? '科技研发后立即生效，影响建筑的各项属性' : 'Technology takes effect immediately after research, affecting building attributes' }}</li>
+                </ol>
+              </div>
+
+              <div class="bg-gray-800/50 p-3 rounded">
+                <h4 class="text-sm font-bold text-industrial-yellow mb-2 uppercase">
+                  {{ locale === 'zh' ? '科技效果类型' : 'Tech Effect Types' }}:
+                </h4>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                  <div>
+                    <h5 class="font-bold text-industrial-green mb-1">
+                      💰 {{ locale === 'zh' ? '产出加成' : 'Output Bonus' }}
+                    </h5>
+                    <p class="text-gray-400">{{ locale === 'zh' ? '提升建筑的金币产出' : 'Increase building coin output' }}</p>
+                  </div>
+                  <div>
+                    <h5 class="font-bold text-industrial-green mb-1">
+                      🌱 {{ locale === 'zh' ? '污染降低' : 'Pollution Reduction' }}
+                    </h5>
+                    <p class="text-gray-400">{{ locale === 'zh' ? '减少建筑产生的污染' : 'Reduce building pollution' }}</p>
+                  </div>
+                  <div>
+                    <h5 class="font-bold text-industrial-green mb-1">
+                      📊 {{ locale === 'zh' ? '稳定度提升' : 'Stability Increase' }}
+                    </h5>
+                    <p class="text-gray-400">{{ locale === 'zh' ? '提升城市稳定度' : 'Increase city stability' }}</p>
+                  </div>
+                  <div>
+                    <h5 class="font-bold text-industrial-green mb-1">
+                      ⚡ {{ locale === 'zh' ? '电力优化' : 'Power Optimization' }}
+                    </h5>
+                    <p class="text-gray-400">{{ locale === 'zh' ? '降低电力消耗或提升发电效率' : 'Reduce power consumption or increase power efficiency' }}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div class="bg-gray-800/50 p-3 rounded">
+                <h4 class="text-sm font-bold text-industrial-yellow mb-2 uppercase">
+                  {{ locale === 'zh' ? '科技树示例' : 'Tech Tree Examples' }}:
+                </h4>
+                <div class="text-sm space-y-2">
+                  <div class="p-2 bg-gray-900/50 rounded">
+                    <span class="font-bold text-industrial-green">🏭 {{ locale === 'zh' ? '工厂科技树' : 'Factory Tech Tree' }}:</span>
+                    <ul class="mt-1 space-y-1 text-gray-400">
+                      <li>• {{ locale === 'zh' ? '自动化生产：+15%产出，+5%稳定度' : 'Automation Production: +15% output, +5% stability' }}</li>
+                      <li>• {{ locale === 'zh' ? '环保技术：-20%污染' : 'Environmental Tech: -20% pollution' }}</li>
+                    </ul>
+                  </div>
+                  <div class="p-2 bg-gray-900/50 rounded">
+                    <span class="font-bold text-industrial-green">🗑️ {{ locale === 'zh' ? '垃圾站科技树' : 'Garbage Station Tech Tree' }}:</span>
+                    <ul class="mt-1 space-y-1 text-gray-400">
+                      <li>• {{ locale === 'zh' ? '高级处理：+30%处理能力' : 'Advanced Processing: +30% processing capacity' }}</li>
+                      <li>• {{ locale === 'zh' ? '资源回收：+10%收入' : 'Resource Recycling: +10% income' }}</li>
+                    </ul>
+                  </div>
                 </div>
               </div>
             </div>
@@ -335,27 +540,41 @@ function toggleContent() {
           <!-- 进阶技巧 -->
           <section>
             <h3 class="text-lg font-bold text-industrial-accent uppercase tracking-wide mb-3 neon-text">
-              6. 🎯 {{ locale === 'zh' ? '进阶技巧' : 'Advanced Tips' }}
+              8. 🎯 {{ locale === 'zh' ? '进阶技巧' : 'Advanced Tips' }}
             </h3>
 
-            <div class="bg-gray-800/50 p-3 rounded">
-              <h4 class="text-sm font-bold text-industrial-yellow mb-2 uppercase">
-                {{ locale === 'zh' ? '布局策略' : 'Layout Strategy' }}:
-              </h4>
-              <ul class="text-sm space-y-2">
-                <li>🏠 + 🌳 {{ locale === 'zh' ? '住宅靠近公园：提升满意度' : 'House near Park: Increase satisfaction' }}</li>
-                <li>🏭 → 🏠 {{ locale === 'zh' ? '工业远离住宅：减少污染影响' : 'Industry away from houses: Reduce pollution' }}</li>
-                <li>🏬 + 🌳 {{ locale === 'zh' ? '商业靠近公园：提升收入' : 'Commerce near Park: Increase income' }}</li>
-                <li>🏭 + 🗑️ {{ locale === 'zh' ? '工业靠近垃圾站：减少污染' : 'Industry near garbage station: Reduce pollution' }}</li>
-                <li>⚡ + 🏠 {{ locale === 'zh' ? '发电设施靠近住宅：提升效率' : 'Power facilities near houses: Increase efficiency' }}</li>
-              </ul>
+            <div class="space-y-4">
+              <div class="bg-gray-800/50 p-3 rounded">
+                <h4 class="text-sm font-bold text-industrial-yellow mb-2 uppercase">
+                  {{ locale === 'zh' ? '布局策略' : 'Layout Strategy' }}:
+                </h4>
+                <ul class="text-sm space-y-2">
+                  <li>🏠 + 🌳 {{ locale === 'zh' ? '住宅靠近公园：提升满意度' : 'House near Park: Increase satisfaction' }}</li>
+                  <li>🏭 → 🏠 {{ locale === 'zh' ? '工业远离住宅：减少污染影响' : 'Industry away from houses: Reduce pollution' }}</li>
+                  <li>🏬 + 🌳 {{ locale === 'zh' ? '商业靠近公园：提升收入' : 'Commerce near Park: Increase income' }}</li>
+                  <li>🏭 + 🗑️ {{ locale === 'zh' ? '工业靠近垃圾站：减少污染' : 'Industry near garbage station: Reduce pollution' }}</li>
+                  <li>⚡ + 🏠 {{ locale === 'zh' ? '发电设施靠近住宅：提升效率' : 'Power facilities near houses: Increase efficiency' }}</li>
+                </ul>
+              </div>
+
+              <div class="bg-gray-800/50 p-3 rounded">
+                <h4 class="text-sm font-bold text-industrial-yellow mb-2 uppercase">
+                  {{ locale === 'zh' ? '系统状态优化' : 'System Status Optimization' }}:
+                </h4>
+                <ul class="text-sm space-y-2">
+                  <li>⚡ {{ locale === 'zh' ? '保持电力充足：发电量至少是耗电量的1.5倍，获得优秀评级' : 'Keep power sufficient: Power output at least 1.5x consumption for excellent rating' }}</li>
+                  <li>🛣️ {{ locale === 'zh' ? '规划道路网络：确保所有道路连通，避免分割，获得优秀交通评级' : 'Plan road network: Ensure all roads are connected, avoid fragmentation for excellent transport rating' }}</li>
+                  <li>🛡️ {{ locale === 'zh' ? '维持稳定度：建设医院、警察局、消防站，保持稳定度≥75' : 'Maintain stability: Build hospitals, police stations, fire stations, keep stability ≥75' }}</li>
+                  <li>🌍 {{ locale === 'zh' ? '控制污染：在工业区周围建设公园、垃圾站，将污染控制在阈值40%以下' : 'Control pollution: Build parks and garbage stations around industrial areas, keep pollution below 40% threshold' }}</li>
+                </ul>
+              </div>
             </div>
           </section>
 
           <!-- 常见问题 -->
           <section>
             <h3 class="text-lg font-bold text-industrial-accent uppercase tracking-wide mb-3 neon-text">
-              7. ❓ {{ locale === 'zh' ? '常见问题解答' : 'FAQ' }}
+              9. ❓ {{ locale === 'zh' ? '常见问题解答' : 'FAQ' }}
             </h3>
 
             <div class="space-y-3">
@@ -391,7 +610,7 @@ function toggleContent() {
           <!-- 关卡系统 -->
           <section>
             <h3 class="text-lg font-bold text-industrial-accent uppercase tracking-wide mb-3 neon-text">
-              8. 🎯 {{ locale === 'zh' ? '关卡系统' : 'Level System' }}
+              10. 🎯 {{ locale === 'zh' ? '关卡系统' : 'Level System' }}
             </h3>
 
             <div class="space-y-4">
@@ -475,7 +694,7 @@ function toggleContent() {
           <!-- 成就系统 -->
           <section>
             <h3 class="text-lg font-bold text-industrial-accent uppercase tracking-wide mb-3 neon-text">
-              9. 🏆 {{ locale === 'zh' ? '成就系统' : 'Achievement System' }}
+              11. 🏆 {{ locale === 'zh' ? '成就系统' : 'Achievement System' }}
             </h3>
 
             <div class="space-y-4">
@@ -619,16 +838,19 @@ function toggleContent() {
           <!-- 游戏小贴士 -->
           <section>
             <h3 class="text-lg font-bold text-industrial-accent uppercase tracking-wide mb-3 neon-text">
-              10. 💡 {{ locale === 'zh' ? '游戏小贴士' : 'Game Tips' }}
+              12. 💡 {{ locale === 'zh' ? '游戏小贴士' : 'Game Tips' }}
             </h3>
 
             <div class="bg-gray-800/50 p-3 rounded">
               <ul class="text-sm space-y-2">
                 <li>🏗️ {{ locale === 'zh' ? '合理布局：住宅靠近公园、医院可提升满意度' : 'Reasonable layout: Houses near parks and hospitals increase satisfaction' }}</li>
                 <li>💰 {{ locale === 'zh' ? '资源平衡：保持人口、就业、金币、满意度、电力等多项资源的平衡' : 'Resource balance: Maintain balance of population, jobs, coins, satisfaction, power, etc.' }}</li>
-                <li>⬆️ {{ locale === 'zh' ? '升级优先级：优先升级产出高、影响大的建筑' : 'Upgrade priority: Prioritize buildings with high output and impact' }}</li>
+                <li>⬆️ {{ locale === 'zh' ? '升级优先级：优先升级产出高、影响大的建筑，3级后可解锁科技树' : 'Upgrade priority: Prioritize buildings with high output and impact. Level 3 unlocks tech tree' }}</li>
                 <li>📊 {{ locale === 'zh' ? '关注状态提示：建筑顶部会出现各种状态图标，及时处理可避免损失' : 'Watch status indicators: Various status icons appear on building tops, handle them promptly to avoid losses' }}</li>
                 <li>🎯 {{ locale === 'zh' ? '关注任务和成就：完成任务和成就可以获得金币和政绩分，提升身份等级' : 'Focus on quests and achievements: Complete quests and achievements to earn coins and merit points, upgrade your title' }}</li>
+                <li>⚡ {{ locale === 'zh' ? '系统状态优化：保持四个系统状态在良好以上，可以最大化每日收入' : 'System status optimization: Keep all four system statuses above good to maximize daily income' }}</li>
+                <li>🔬 {{ locale === 'zh' ? '科技树研发：优先研发产出加成和污染降低的科技，提升城市效率' : 'Tech tree research: Prioritize output bonus and pollution reduction technologies to improve city efficiency' }}</li>
+                <li>🛣️ {{ locale === 'zh' ? '道路规划：确保道路连通，避免分割，提升交通系统评级' : 'Road planning: Ensure roads are connected, avoid fragmentation to improve transport system rating' }}</li>
                 <li>💾 {{ locale === 'zh' ? '自动保存：游戏自动保存，无需担心丢失进度' : 'Auto-save: Game auto-saves, no need to worry about losing progress' }}</li>
                 <li>🎮 {{ locale === 'zh' ? '享受过程：城市建设是一个渐进的过程，享受每一步的成长' : 'Enjoy the process: City building is a gradual process, enjoy every step of growth' }}</li>
                 <li>⚡ {{ locale === 'zh' ? '性能优化：建议在 chrome://flags 中开启 GPU 加速以获得更好的游戏体验' : 'Performance optimization: Enable GPU acceleration in chrome://flags for better gaming experience' }}</li>
