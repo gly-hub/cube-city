@@ -22,6 +22,7 @@ export const useGameState = defineStore('gameState', {
     // 游戏时间和经济
     gameDay: 1,
     credits: 3000,
+    gameSpeed: 1.0, // 游戏速度倍率（1.0 = 正常速度，2.0 = 2倍速，0.5 = 0.5倍速）
 
     // 城市属性
     territory: 16,
@@ -349,6 +350,9 @@ export const useGameState = defineStore('gameState', {
     },
     setLanguage(lang) {
       this.language = lang
+    },
+    setGameSpeed(speed) {
+      this.gameSpeed = Math.max(0.1, Math.min(5.0, speed)) // 限制在0.1-5.0倍速之间
     },
     removeToast(id) {
       this.toastQueue = this.toastQueue.filter(t => t.id !== id)

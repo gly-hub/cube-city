@@ -2,7 +2,7 @@
 import { eventBus } from '@/js/utils/event-bus.js'
 import { useGameState } from '@/stores/useGameState.js'
 import { storeToRefs } from 'pinia'
-import { computed, ref, watch } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
 import { Teleport } from 'vue'
 import AnimatedNumber from './AnimatedNumber.vue'
 import AudioManager from './AudioManager.vue'
@@ -11,7 +11,7 @@ import { getNextTitle } from '@/constants/title-config.js'
 import { SYSTEM_STATUS_LEVELS } from '@/js/utils/system-status.js'
 
 const gameState = useGameState()
-const { credits, totalJobs, maxPopulation, territory, citySize, cityLevel, cityName, language, showMapOverview, gameDay, power, maxPower, musicEnabled, musicVolume, isPlayingMusic, showQuestPanel, meritPoints, buildingCount, dailyIncome, pollution, stability, systemStatus } = storeToRefs(gameState)
+const { credits, totalJobs, maxPopulation, territory, citySize, cityLevel, cityName, language, showMapOverview, gameDay, power, maxPower, musicEnabled, musicVolume, isPlayingMusic, showQuestPanel, meritPoints, buildingCount, dailyIncome, pollution, stability, systemStatus, gameSpeed } = storeToRefs(gameState)
 
 // 系统状态显示
 const powerStatus = computed(() => SYSTEM_STATUS_LEVELS[systemStatus.value.power] || SYSTEM_STATUS_LEVELS[3])
@@ -60,6 +60,69 @@ function handleVolumeChange(event) {
   const volume = Number.parseFloat(event.target.value)
   gameState.setMusicVolume(volume)
 }
+
+// 游戏速度控制
+const showSpeedSlider = ref(false)
+const speedButtonRef = ref(null)
+const speedMenuRef = ref(null)
+const speedMenuStyle = ref({})
+const speedOptions = [
+  { value: 0.25, label: { zh: '0.25x', en: '0.25x' }, icon: '🐌' },
+  { value: 0.5, label: { zh: '0.5x', en: '0.5x' }, icon: '⏱️' },
+  { value: 1.0, label: { zh: '1x', en: '1x' }, icon: '▶️' },
+  { value: 2.0, label: { zh: '2x', en: '2x' }, icon: '⏩' },
+  { value: 3.0, label: { zh: '3x', en: '3x' }, icon: '⚡' },
+]
+
+// 计算菜单位置（显示在按钮下方）
+function updateSpeedMenuPosition() {
+  if (!speedButtonRef.value || !showSpeedSlider.value) return
+  
+  nextTick(() => {
+    if (!speedButtonRef.value) return
+    
+    const buttonRect = speedButtonRef.value.getBoundingClientRect()
+    speedMenuStyle.value = {
+      top: `${buttonRect.bottom + 8}px`,
+      left: `${buttonRect.left + (buttonRect.width / 2)}px`,
+      transform: 'translateX(-50%)',
+    }
+  })
+}
+
+// 处理鼠标离开（延迟关闭，避免快速移动时关闭）
+let speedMenuTimeout = null
+function handleSpeedMenuLeave() {
+  speedMenuTimeout = setTimeout(() => {
+    if (!speedMenuRef.value || !speedMenuRef.value.matches(':hover')) {
+      showSpeedSlider.value = false
+    }
+  }, 200)
+}
+
+function setGameSpeed(speed) {
+  gameState.setGameSpeed(speed)
+  showSpeedSlider.value = false
+  if (speedMenuTimeout) {
+    clearTimeout(speedMenuTimeout)
+  }
+}
+
+// 监听显示状态，更新位置
+watch(showSpeedSlider, (newVal) => {
+  if (newVal) {
+    updateSpeedMenuPosition()
+    // 监听窗口滚动和调整大小
+    window.addEventListener('scroll', updateSpeedMenuPosition, true)
+    window.addEventListener('resize', updateSpeedMenuPosition)
+  } else {
+    window.removeEventListener('scroll', updateSpeedMenuPosition, true)
+    window.removeEventListener('resize', updateSpeedMenuPosition)
+    if (speedMenuTimeout) {
+      clearTimeout(speedMenuTimeout)
+    }
+  }
+})
 
 // 警告状态
 const populationWarning = computed(() => totalJobs.value > maxPopulation.value)
@@ -299,6 +362,68 @@ function showGuideModal() {
           >
             📋 {{ language === 'zh' ? '任务' : 'Quests' }}
           </button>
+
+          <!-- 游戏速度控制 -->
+          <div class="relative">
+            <button
+              ref="speedButtonRef"
+              class="w-full px-2 py-1 rounded bg-industrial-yellow text-gray-900 text-sm font-bold shadow transition hover:bg-industrial-yellow/80"
+              :title="language === 'zh' ? `当前速度: ${gameSpeed}x` : `Current Speed: ${gameSpeed}x`"
+              @click.stop="showSpeedSlider = !showSpeedSlider"
+              @mouseenter="showSpeedSlider = true"
+              @mouseleave="handleSpeedMenuLeave"
+            >
+              ⏱️ {{ gameSpeed }}x
+            </button>
+
+            <!-- 速度选择菜单 - 使用 Teleport 确保在最上层 -->
+            <Teleport to="body">
+              <div
+                v-if="showSpeedSlider"
+                ref="speedMenuRef"
+                class="fixed p-2 bg-gray-800 rounded shadow-lg border border-gray-600 z-[9999] min-w-[200px]"
+                :style="speedMenuStyle"
+                @mouseenter="showSpeedSlider = true"
+                @mouseleave="showSpeedSlider = false"
+                @click.stop
+              >
+                <div class="text-xs text-gray-400 mb-2 text-center uppercase">
+                  {{ language === 'zh' ? '游戏速度' : 'Game Speed' }}
+                </div>
+                <div class="space-y-1">
+                  <button
+                    v-for="option in speedOptions"
+                    :key="option.value"
+                    class="w-full px-3 py-1.5 rounded text-sm font-bold transition text-left flex items-center space-x-2"
+                    :class="gameSpeed === option.value ? 'bg-industrial-yellow text-gray-900' : 'bg-gray-700 text-white hover:bg-gray-600'"
+                    @click.stop="setGameSpeed(option.value)"
+                  >
+                    <span>{{ option.icon }}</span>
+                    <span>{{ option.label[language] }}</span>
+                  </button>
+                </div>
+                <!-- 自定义速度滑块 -->
+                <div class="mt-3 pt-3 border-t border-gray-700">
+                  <div class="flex items-center space-x-2 mb-2">
+                    <span class="text-xs text-gray-400">🐌</span>
+                    <input
+                      type="range"
+                      min="0.1"
+                      max="5.0"
+                      step="0.1"
+                      :value="gameSpeed"
+                      class="flex-1 h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer"
+                      @input.stop="(e) => gameState.setGameSpeed(Number.parseFloat(e.target.value))"
+                    >
+                    <span class="text-xs text-gray-400">⚡</span>
+                  </div>
+                  <div class="text-xs text-center text-gray-400">
+                    {{ gameSpeed.toFixed(1) }}x
+                  </div>
+                </div>
+              </div>
+            </Teleport>
+          </div>
         </div>
       </div>
     </div>

@@ -1,7 +1,8 @@
 <script setup>
 import { eventBus } from '@/js/utils/event-bus.js'
 import { useGameState } from '@/stores/useGameState.js'
-import { onMounted, onUnmounted, ref } from 'vue'
+import { storeToRefs } from 'pinia'
+import { onMounted, onUnmounted, ref, watch } from 'vue'
 import BuildingSidebar from './components/BuildingSidebar.vue'
 import RightInfoPanel from './components/RightInfoPanel.vue'
 import ConfirmDialog from './components/ConfirmDialog.vue'
@@ -22,10 +23,12 @@ const showDialog = ref(false)
 const dialogData = ref({})
 const { getDialogConfig, handleBuildingTransaction } = useBuilding()
 const gameState = useGameState()
+const { gameSpeed } = storeToRefs(gameState)
 
-// 时间管理 - 统一5秒计时器
+// 时间管理 - 可调节速度的计时器
 let dayInterval = null
 let isPaused = false
+const BASE_DAY_INTERVAL = 5000 // 基础间隔：5秒 = 1天（1倍速）
 
 // 页面可见性监听 - 实现HX-43离屏暂停功能
 function handleVisibilityChange() {
@@ -43,15 +46,23 @@ function handleVisibilityChange() {
   }
 }
 
-// 启动每日计时器
+// 启动每日计时器（根据游戏速度调整间隔）
 function startDayTimer() {
   if (dayInterval) {
     clearInterval(dayInterval)
   }
+  
+  // 根据游戏速度计算实际间隔：速度越快，间隔越短
+  // 例如：2倍速 = 5000/2 = 2500ms，0.5倍速 = 5000/0.5 = 10000ms
+  const actualInterval = BASE_DAY_INTERVAL / gameState.gameSpeed
+  
   dayInterval = setInterval(() => {
     gameState.nextDay()
-  }, 5000)
+  }, actualInterval)
 }
+
+// 监听游戏速度变化，重新启动计时器
+let speedWatcher = null
 
 // 监听 mitt 事件
 // 只监听一次即可
@@ -84,20 +95,31 @@ function handleKeydown(e) {
 
 onMounted(() => {
   window.addEventListener('keydown', handleKeydown)
-  // 启动统一的5秒计时器（集成每日收益和稳定度更新）
+  // 启动计时器（集成每日收益和稳定度更新）
   startDayTimer()
   // 监听页面可见性变化 - 实现HX-43离屏暂停功能
   document.addEventListener('visibilitychange', handleVisibilityChange)
+  
+  // 监听游戏速度变化，自动调整计时器
+  speedWatcher = watch(() => gameSpeed.value, () => {
+    if (!isPaused) {
+      startDayTimer()
+    }
+  })
 })
 
 onUnmounted(() => {
   window.removeEventListener('keydown', handleKeydown)
-  // 清除统一计时器
+  // 清除计时器
   if (dayInterval) {
     clearInterval(dayInterval)
   }
   // 移除页面可见性监听
   document.removeEventListener('visibilitychange', handleVisibilityChange)
+  // 移除速度监听
+  if (speedWatcher) {
+    speedWatcher()
+  }
 })
 </script>
 
