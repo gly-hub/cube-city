@@ -13,6 +13,8 @@ Welcome to CubeCity! This is a cartoon-style 2.5D city simulation game where you
 *   **🏙️ Free Construction:** Place, move, and demolish various buildings and roads as you wish to create a unique cityscape.
 *   **🧩 Strategic Planning:** Balance the development of Residential (R), Commercial (C), and Industrial (I) zones, while also considering Environment (E), Society (S), and Governance (G) for sustainable city growth.
 *   **💰 Economic System:** Buildings automatically generate coins. Use these coins to construct new buildings, upgrade, or expand your territory.
+*   **🔬 Tech Tree System:** Research technologies when buildings reach maximum level to enhance performance and city efficiency.
+*   **📊 System Status:** Dynamic calculation of Power Grid, Transport, Security, and Environment statuses that affect city income.
 *   **💾 Local Storage:** Your city progress is automatically saved locally, so you can continue building anytime.
 *   **🎨 Cartoon Style:** Bright colors and cute cartoon models provide a relaxing and enjoyable visual experience.
 
@@ -27,6 +29,7 @@ The game revolves around four main operation modes, allowing you to easily manag
 *   **🔍 Select Mode (SELECT):**
     *   Click buildings to view details such as population, status, and output.
     *   Upgrade buildings when conditions are met to enhance their functions and output.
+    *   Research tech trees for level 3 buildings to further improve performance.
 
 *   **🏗️ Build Mode (BUILD):**
     *   Select the building you want from the left panel.
@@ -56,83 +59,32 @@ The game revolves around four main operation modes, allowing you to easily manag
 *   **📋 Product Requirements:** [PRD Document](./docs/PRD.md) - Product requirements document
 *   **🔧 Technical Design:** [TD Document](./docs/TD.md) - Technical design document
 
-## 🚀 Roadmap
+## 🚀 Quick Start
 
-We plan to add more exciting features in the future, including:
+### Development
 
-*   **Dynamic Economic System:** Market demand will change dynamically based on your city's building ratio.
-*   **Challenge & Failure Mechanisms:** Bankruptcy, population loss, environmental collapse, and other failure conditions to increase challenge.
-*   **Strategic Building System:** Buildings will interact with each other, testing your planning skills.
-*   **Dynamic Event System:** Random events like economic crises and immigration waves make city management unpredictable.
-*   **Tech Tree & Policy System:** Unlock new technologies and enact policies to guide city development from a higher level.
+```bash
+# Install dependencies
+npm install
 
-## 🧑‍💻 Author
+# Start development server
+npm run dev
 
-Developed by [hexianWeb](https://github.com/hexianWeb).
+# Build for production
+npm run build
+```
 
-## 💖 Support
+### Docker Deployment
 
-If you find this project helpful, consider buying me a coffee to support long-term maintenance and updates:
+```bash
+docker run -d \
+  --name cube-city \
+  --restart always \
+  -p 5141:5141 \
+  cube-city:latest
+```
 
-![Sponsor QR](README/coffe.jpg)
 
 ## 📄 License
 
 This project is licensed under the [MIT License](LICENSE).
-
-## New Feature: Building Status Cycling System 🔄
-
-### Features
-
-1. **Smart Status Display**
-   - **Debuff Priority:** When a building has problem statuses, all debuffs are cycled first.
-   - **Buff Fallback:** When there are no problems, all buffs are cycled.
-   - **Smooth Transitions:** Statuses fade in and out for a smooth visual experience.
-
-2. **Cycling Mechanism**
-   - Automatically switches to the next status every 2.5 seconds
-   - Static display for single status, auto-cycling for multiple statuses
-   - Supports real-time status changes
-
-3. **Status Categories**
-   ```javascript
-   DEBUFF: ['MISSING_ROAD', 'MISSING_POWER', 'MISSING_POPULATION', 'OVER_POPULATION', 'MISSING_POLLUTION']
-   BUFF: ['POWER_BOOST', 'ECONOMY_BOOST', 'POPULATION_BOOST', 'COIN_BUFF', 'HUMAN_BUFF', 'UPGRADE']
-   ```
-
-### Usage Example
-
-Configure statuses in building classes:
-
-```javascript
-this.statusConfig = [
-  // === DEBUFF status (problem, cycled first) ===
-  {
-    statusType: 'MISSING_ROAD',
-    condition: (building, gs) => {
-      building.buffConfig = { targets: ['road'] }
-      return !building.checkForBuffTargets(gs)
-    },
-    effect: { type: 'missRoad', offsetY: 0.7 },
-  },
-
-  // === BUFF status (bonus, cycled when no problems) ===
-  {
-    statusType: 'COIN_BUFF',
-    condition: (building, gs) => {
-      building.buffConfig = { targets: ['shop'], range: 1 }
-      return building.checkForBuffTargets(gs)
-    },
-    effect: { type: 'coinBuff', offsetY: 0.7 },
-  },
-]
-```
-
-### Technical Implementation
-
-- **Status Management:** Switch from single to array-based status management
-- **Interval Cycling:** Use `setInterval` for automatic switching
-- **Animation Optimization:** Dedicated `fadeOut` method for smooth transitions
-- **Memory Safety:** Complete cleanup to prevent memory leaks
-
-Reference: `src/js/components/tiles/buildings/park.js`
