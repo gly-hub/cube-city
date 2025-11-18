@@ -11,7 +11,9 @@ import Office from './buildings/office.js'
 import Park from './buildings/park.js'
 import Police from './buildings/police.js'
 import Road from './buildings/road.js'
+import School from './buildings/school.js'
 import Shop from './buildings/shop.js'
+import ThemePark from './buildings/theme_park.js'
 import SunPower from './buildings/sun_power.js'
 import WaterTower from './buildings/water_tower.js'
 import WindPower from './buildings/wind_power.js'
@@ -35,6 +37,8 @@ const BUILDING_CLASS_MAP = {
   wind_power: WindPower,
   garbage_station: GarbageStation,
   hero_park: HeroPark,
+  school: School,
+  theme_park: ThemePark,
   // 其他建筑类型可在此扩展
 }
 

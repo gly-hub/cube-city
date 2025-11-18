@@ -309,26 +309,26 @@ function toggleContent() {
 
             <div class="space-y-4">
               <!-- 主要资源 -->
-              <div class="bg-gray-800/50 p-3 rounded">
-                <h4 class="text-sm font-bold text-industrial-yellow mb-2 uppercase">
-                  {{ locale === 'zh' ? '主要资源' : 'Main Resources' }}:
-                </h4>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
-                  <div class="flex items-center space-x-2">
-                    <span class="text-industrial-green text-lg">💰</span>
-                    <span>{{ locale === 'zh' ? '金币：建造、升级、扩地' : 'Coins: Build, upgrade, expand' }}</span>
-                  </div>
-                  <div class="flex items-center space-x-2">
-                    <span class="text-industrial-blue text-lg">👥</span>
-                    <span>{{ locale === 'zh' ? '人口：住宅容量决定' : 'Population: Determined by housing capacity' }}</span>
-                  </div>
-                  <div class="flex items-center space-x-2">
-                    <span class="text-industrial-yellow text-lg">⚡</span>
-                    <span>{{ locale === 'zh' ? '电力：建筑消耗，需发电厂' : 'Power: Building consumption, needs power plants' }}</span>
-                  </div>
-                  <div class="flex items-center space-x-2">
-                    <span class="text-gray-400 text-lg">🌫️</span>
-                    <span>{{ locale === 'zh' ? '污染：工业产生，环境建筑降低' : 'Pollution: Industrial production, environmental buildings reduce' }}</span>
+            <div class="bg-gray-800/50 p-3 rounded">
+              <h4 class="text-sm font-bold text-industrial-yellow mb-2 uppercase">
+                {{ locale === 'zh' ? '主要资源' : 'Main Resources' }}:
+              </h4>
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                <div class="flex items-center space-x-2">
+                  <span class="text-industrial-green text-lg">💰</span>
+                  <span>{{ locale === 'zh' ? '金币：建造、升级、扩地' : 'Coins: Build, upgrade, expand' }}</span>
+                </div>
+                <div class="flex items-center space-x-2">
+                  <span class="text-industrial-blue text-lg">👥</span>
+                  <span>{{ locale === 'zh' ? '人口：住宅容量决定' : 'Population: Determined by housing capacity' }}</span>
+                </div>
+                <div class="flex items-center space-x-2">
+                  <span class="text-industrial-yellow text-lg">⚡</span>
+                  <span>{{ locale === 'zh' ? '电力：建筑消耗，需发电厂' : 'Power: Building consumption, needs power plants' }}</span>
+                </div>
+                <div class="flex items-center space-x-2">
+                  <span class="text-gray-400 text-lg">🌫️</span>
+                  <span>{{ locale === 'zh' ? '污染：工业产生，环境建筑降低' : 'Pollution: Industrial production, environmental buildings reduce' }}</span>
                   </div>
                   <div class="flex items-center space-x-2">
                     <span class="text-industrial-green text-lg">📊</span>
@@ -544,17 +544,17 @@ function toggleContent() {
             </h3>
 
             <div class="space-y-4">
-              <div class="bg-gray-800/50 p-3 rounded">
-                <h4 class="text-sm font-bold text-industrial-yellow mb-2 uppercase">
-                  {{ locale === 'zh' ? '布局策略' : 'Layout Strategy' }}:
-                </h4>
-                <ul class="text-sm space-y-2">
-                  <li>🏠 + 🌳 {{ locale === 'zh' ? '住宅靠近公园：提升满意度' : 'House near Park: Increase satisfaction' }}</li>
-                  <li>🏭 → 🏠 {{ locale === 'zh' ? '工业远离住宅：减少污染影响' : 'Industry away from houses: Reduce pollution' }}</li>
-                  <li>🏬 + 🌳 {{ locale === 'zh' ? '商业靠近公园：提升收入' : 'Commerce near Park: Increase income' }}</li>
-                  <li>🏭 + 🗑️ {{ locale === 'zh' ? '工业靠近垃圾站：减少污染' : 'Industry near garbage station: Reduce pollution' }}</li>
-                  <li>⚡ + 🏠 {{ locale === 'zh' ? '发电设施靠近住宅：提升效率' : 'Power facilities near houses: Increase efficiency' }}</li>
-                </ul>
+            <div class="bg-gray-800/50 p-3 rounded">
+              <h4 class="text-sm font-bold text-industrial-yellow mb-2 uppercase">
+                {{ locale === 'zh' ? '布局策略' : 'Layout Strategy' }}:
+              </h4>
+              <ul class="text-sm space-y-2">
+                <li>🏠 + 🌳 {{ locale === 'zh' ? '住宅靠近公园：提升满意度' : 'House near Park: Increase satisfaction' }}</li>
+                <li>🏭 → 🏠 {{ locale === 'zh' ? '工业远离住宅：减少污染影响' : 'Industry away from houses: Reduce pollution' }}</li>
+                <li>🏬 + 🌳 {{ locale === 'zh' ? '商业靠近公园：提升收入' : 'Commerce near Park: Increase income' }}</li>
+                <li>🏭 + 🗑️ {{ locale === 'zh' ? '工业靠近垃圾站：减少污染' : 'Industry near garbage station: Reduce pollution' }}</li>
+                <li>⚡ + 🏠 {{ locale === 'zh' ? '发电设施靠近住宅：提升效率' : 'Power facilities near houses: Increase efficiency' }}</li>
+              </ul>
               </div>
 
               <div class="bg-gray-800/50 p-3 rounded">

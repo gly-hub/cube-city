@@ -130,6 +130,38 @@ export default [
     type: 'gltfModel',
     path: 'models/water_tower.glb',
   },
+  // school
+  {
+    name: 'school_level1',
+    type: 'gltfModel',
+    path: 'models/school_level1.glb',
+  },
+  {
+    name: 'school_level2',
+    type: 'gltfModel',
+    path: 'models/school_level2.glb',
+  },
+  {
+    name: 'school_level3',
+    type: 'gltfModel',
+    path: 'models/school_level3.glb',
+  },
+  // theme_park
+  {
+    name: 'theme_park_level1',
+    type: 'gltfModel',
+    path: 'models/theme_park_level1.glb',
+  },
+  {
+    name: 'theme_park_level2',
+    type: 'gltfModel',
+    path: 'models/theme_park_level2.glb',
+  },
+  {
+    name: 'theme_park_level3',
+    type: 'gltfModel',
+    path: 'models/theme_park_level3.glb',
+  },
   // smoke 用 perlin 噪声
   {
     name: 'perlinNoise',

@@ -192,7 +192,7 @@ export function confirmUpgrade(ctx) {
     return
   }
 
-  const newBuilding = building.upgrade()
+    const newBuilding = building.upgrade()
   if (!newBuilding) {
     const message = ctx.gameState.language === 'zh'
       ? '建筑已达到最高等级。'
@@ -225,14 +225,14 @@ export function confirmUpgrade(ctx) {
   ctx.gameState.updateCredits(-upgradeCost)
 
   // 更新建筑实例
-  ctx.selected.setBuilding(newBuilding.type, newBuilding.level || 1, newBuilding.direction)
+      ctx.selected.setBuilding(newBuilding.type, newBuilding.level || 1, newBuilding.direction)
 
   // 更新 metadata
-  ctx.gameState.setTile(ctx.selected.x, ctx.selected.y, {
+      ctx.gameState.setTile(ctx.selected.x, ctx.selected.y, {
     level: newBuilding.level,
-    detail: BUILDING_DATA[newBuilding.type]?.levels[newBuilding.level],
-    outputFactor: BUILDING_DATA[newBuilding.type]?.levels[newBuilding.level]?.outputFactor || 1,
-  })
+        detail: BUILDING_DATA[newBuilding.type]?.levels[newBuilding.level],
+        outputFactor: BUILDING_DATA[newBuilding.type]?.levels[newBuilding.level]?.outputFactor || 1,
+      })
 
   // 更新 selectedBuilding 状态，确保UI显示正确的等级
   ctx.gameState.setSelectedBuilding({ 
@@ -263,10 +263,10 @@ export function confirmUpgrade(ctx) {
     level: newBuilding.level,
   })
 
-  const message = ctx.gameState.language === 'zh'
-    ? '建筑升级成功！'
-    : 'Building upgraded successfully!'
-  showToast('success', message)
+      const message = ctx.gameState.language === 'zh'
+        ? '建筑升级成功！'
+        : 'Building upgraded successfully!'
+      showToast('success', message)
 }
 
 /**

@@ -309,4 +309,93 @@ export const BUILDING_INTERACTIONS = {
     ],
   },
 
+  // 教育设施的相互作用
+  school: {
+    modifiers: {
+      maxPopulation: [
+        {
+          targets: ['house', 'house2'],
+          range: 2,
+          effect: 0.15, // 每个相邻学校增加15%人口容量（教育吸引居民）
+          description: '优质教育吸引更多居民',
+          stackable: true,
+          maxStacks: 2,
+        },
+      ],
+      coinOutput: [
+        {
+          targets: ['shop', 'office'],
+          range: 2,
+          effect: 0.1, // 教育提升商业效率
+          description: '教育水平提升商业效率',
+          stackable: true,
+          maxStacks: 2,
+        },
+        {
+          targets: ['factory', 'chemistry_factory'],
+          range: 2,
+          effect: 0.08, // 教育提升工业效率（高技能工人）
+          description: '高技能工人提升生产效率',
+          stackable: true,
+          maxStacks: 2,
+        },
+      ],
+      stability: [
+        {
+          targets: ['house', 'house2'],
+          range: 3,
+          effect: 0.05, // 教育提升稳定度
+          description: '教育提升居民满意度',
+          stackable: true,
+          maxStacks: 3,
+        },
+      ],
+    },
+    statusEffects: [
+      {
+        type: 'EDUCATION_BOOST',
+        condition: { targets: ['house', 'house2'], range: 2, inverse: false },
+        effect: { type: 'humanBuff', offsetY: 0.7 },
+      },
+      {
+        type: 'EDUCATION_BOOST_COMMERCIAL',
+        condition: { targets: ['shop', 'office'], range: 2, inverse: false },
+        effect: { type: 'coinBuff', offsetY: 0.7 },
+      },
+      {
+        type: 'EDUCATION_BOOST_INDUSTRIAL',
+        condition: { targets: ['factory', 'chemistry_factory'], range: 2, inverse: false },
+        effect: { type: 'coinBuff', offsetY: 0.7 },
+      },
+    ],
+  },
+
+  // 主题公园的相互作用
+  theme_park: {
+    modifiers: {
+      coinOutput: [
+        {
+          targets: ['shop', 'office'],
+          range: 2,
+          effect: 0.2, // 相邻商业建筑产出+20%
+          description: '主题公园吸引游客，提升商业收入',
+          stackable: true,
+          maxStacks: 4,
+        },
+      ],
+    },
+    statusEffects: [
+      {
+        type: 'TOURISM_BOOST',
+        condition: { targets: ['shop', 'office'], range: 2, inverse: false },
+        effect: { type: 'coinBuff', offsetY: 0.7 },
+      },
+      {
+        type: 'ENTERTAINMENT_BOOST',
+        condition: { targets: ['house', 'house2'], range: 3, inverse: false },
+        effect: { type: 'happy', offsetY: 0.7 },
+      },
+    ],
+  },
+
 }

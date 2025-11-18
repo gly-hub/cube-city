@@ -25,10 +25,15 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@gltf-transform/core": "^4.2.1",
+    "@gltf-transform/extensions": "^4.2.1",
+    "@gltf-transform/functions": "^4.2.1",
     "@vitejs/plugin-legacy": "^5.4.1",
     "@vitejs/plugin-vue": "^5.2.4",
     "cannon": "^0.6.2",
     "countup.js": "^2.9.0",
+    "draco3d": "^1.5.7",
+    "draco3dgltf": "^1.5.7",
     "gsap": "^3.12.5",
     "mitt": "^3.0.1",
     "pinia": "^3.0.3",

@@ -568,6 +568,97 @@ export const BUILDING_DATA = {
       },
     },
   },
+
+  // ===================== 教育设施 =====================
+  school: {
+    name: { zh: '学校', en: 'School' },
+    type: 'school',
+    icon: '🏫',
+    buildingType: { zh: '教育设施', en: 'Educational Facility' },
+    category: 'social',
+    levels: {
+      1: {
+        displayName: { zh: '普通学校', en: 'Basic School' },
+        cost: 1500,
+        powerUsage: 25,
+        pollution: 0,
+        population: 30, // 教师和工作人员
+        upgradeCost: 2500,
+        nextLevel: 2,
+        visible: true,
+        category: 'social',
+      },
+      2: {
+        displayName: { zh: '高级学校', en: 'Advanced School' },
+        cost: 2500,
+        powerUsage: 40,
+        pollution: 0,
+        population: 50,
+        upgradeCost: 4000,
+        nextLevel: 3,
+        visible: false,
+        category: 'social',
+      },
+      3: {
+        displayName: { zh: '教育中心', en: 'Education Center' },
+        cost: 4000,
+        powerUsage: 60,
+        pollution: 0,
+        population: 80,
+        upgradeCost: null,
+        nextLevel: null,
+        visible: false,
+        category: 'social',
+      },
+    },
+  },
+
+  // ===================== 主题公园 =====================
+  theme_park: {
+    name: { zh: '主题公园', en: 'Theme Park' },
+    type: 'theme_park',
+    icon: '🎢',
+    buildingType: { zh: '娱乐设施', en: 'Entertainment Facility' },
+    category: 'social',
+    levels: {
+      1: {
+        displayName: { zh: '小型游乐园', en: 'Small Amusement Park' },
+        cost: 12000,
+        powerUsage: 120,
+        pollution: 10,
+        coinOutput: 400,
+        population: 200,
+        upgradeCost: 18000,
+        nextLevel: 2,
+        visible: true,
+        category: 'social',
+      },
+      2: {
+        displayName: { zh: '大型主题公园', en: 'Large Theme Park' },
+        cost: 18000,
+        powerUsage: 180,
+        pollution: 12,
+        coinOutput: 600,
+        population: 300,
+        upgradeCost: 25000,
+        nextLevel: 3,
+        visible: false,
+        category: 'social',
+      },
+      3: {
+        displayName: { zh: '世界级主题公园', en: 'World-Class Theme Park' },
+        cost: 25000,
+        powerUsage: 250,
+        pollution: 15,
+        coinOutput: 900,
+        population: 450,
+        upgradeCost: null,
+        nextLevel: null,
+        visible: false,
+        category: 'social',
+      },
+    },
+  },
 }
 // 操作模式常量
 export const BUILDING_MODES = [

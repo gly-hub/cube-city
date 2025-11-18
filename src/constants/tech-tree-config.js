@@ -407,6 +407,71 @@ export const TECH_TREE_CONFIGS = {
     },
   ],
 
+  // ===================== 学校科技树 =====================
+  school: [
+    {
+      id: 'tech_school_quality',
+      buildingType: 'school',
+      name: {
+        zh: '优质教育',
+        en: 'Quality Education',
+      },
+      description: {
+        zh: '提升教学质量，增加人口容量加成',
+        en: 'Improve teaching quality to increase population capacity bonus',
+      },
+      icon: '📚',
+      cost: 2000,
+      prerequisites: [],
+      effects: {
+        [TECH_EFFECT_TYPES.POPULATION]: 0.1, // 人口容量加成+10%（影响范围）
+        [TECH_EFFECT_TYPES.STABILITY]: 0.05, // 稳定度+5%
+      },
+      order: 1,
+    },
+    {
+      id: 'tech_school_vocational',
+      buildingType: 'school',
+      name: {
+        zh: '职业教育',
+        en: 'Vocational Education',
+      },
+      description: {
+        zh: '开展职业教育，提升商业和工业建筑效率',
+        en: 'Provide vocational education to improve commercial and industrial building efficiency',
+      },
+      icon: '🔧',
+      cost: 3000,
+      prerequisites: ['tech_school_quality'], // 需要先研发优质教育
+      effects: {
+        [TECH_EFFECT_TYPES.OUTPUT]: 0.15, // 影响范围内建筑产出+15%
+        [TECH_EFFECT_TYPES.STABILITY]: 0.08, // 稳定度+8%
+      },
+      order: 2,
+    },
+    {
+      id: 'tech_school_research',
+      buildingType: 'school',
+      name: {
+        zh: '科研中心',
+        en: 'Research Center',
+      },
+      description: {
+        zh: '建立科研中心，大幅提升教育影响范围和效果',
+        en: 'Establish research center to significantly improve education impact range and effects',
+      },
+      icon: '🔬',
+      cost: 5000,
+      prerequisites: ['tech_school_vocational'], // 需要先研发职业教育
+      effects: {
+        [TECH_EFFECT_TYPES.POPULATION]: 0.2, // 人口容量加成+20%
+        [TECH_EFFECT_TYPES.OUTPUT]: 0.1, // 影响范围内建筑产出+10%
+        [TECH_EFFECT_TYPES.STABILITY]: 0.12, // 稳定度+12%
+      },
+      order: 3,
+    },
+  ],
+
   // ===================== 民宅科技树 =====================
   house2: [
     {
@@ -758,6 +823,71 @@ export const TECH_TREE_CONFIGS = {
         [TECH_EFFECT_TYPES.STABILITY]: 0.1, // 稳定度+10%
       },
       order: 2,
+    },
+  ],
+
+  // ===================== 主题公园科技树 =====================
+  theme_park: [
+    {
+      id: 'tech_theme_park_attraction',
+      buildingType: 'theme_park',
+      name: {
+        zh: '新增游乐设施',
+        en: 'New Attractions',
+      },
+      description: {
+        zh: '增加更多游乐设施，提升游客满意度和收入',
+        en: 'Add more attractions to improve visitor satisfaction and income',
+      },
+      icon: '🎡',
+      cost: 5000,
+      prerequisites: [],
+      effects: {
+        [TECH_EFFECT_TYPES.OUTPUT]: 0.25, // 收入+25%
+        [TECH_EFFECT_TYPES.STABILITY]: 0.05, // 稳定度+5%
+      },
+      order: 1,
+    },
+    {
+      id: 'tech_theme_park_marketing',
+      buildingType: 'theme_park',
+      name: {
+        zh: '营销推广',
+        en: 'Marketing Campaign',
+      },
+      description: {
+        zh: '加强营销推广，吸引更多游客，提升商业建筑收益',
+        en: 'Strengthen marketing to attract more visitors and boost commercial building revenue',
+      },
+      icon: '📢',
+      cost: 6000,
+      prerequisites: ['tech_theme_park_attraction'], // 需要先研发新增游乐设施
+      effects: {
+        [TECH_EFFECT_TYPES.OUTPUT]: 0.15, // 收入+15%
+        [TECH_EFFECT_TYPES.EFFICIENCY]: 0.1, // 影响范围内商业建筑效率+10%
+      },
+      order: 2,
+    },
+    {
+      id: 'tech_theme_park_vip',
+      buildingType: 'theme_park',
+      name: {
+        zh: 'VIP服务',
+        en: 'VIP Services',
+      },
+      description: {
+        zh: '提供VIP服务，大幅提升收入并增强对周围商业建筑的影响',
+        en: 'Provide VIP services to significantly increase revenue and enhance impact on surrounding commercial buildings',
+      },
+      icon: '👑',
+      cost: 8000,
+      prerequisites: ['tech_theme_park_marketing'], // 需要先研发营销推广
+      effects: {
+        [TECH_EFFECT_TYPES.OUTPUT]: 0.3, // 收入+30%
+        [TECH_EFFECT_TYPES.STABILITY]: 0.1, // 稳定度+10%
+        [TECH_EFFECT_TYPES.EFFICIENCY]: 0.15, // 影响范围内商业建筑效率+15%
+      },
+      order: 3,
     },
   ],
 }
