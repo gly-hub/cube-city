@@ -313,7 +313,14 @@ export const useGameState = defineStore('gameState', {
     // startStabilityTimer() 和 stopStabilityTimer() 已移除
 
     setMode(mode) {
+      const fromMode = this.currentMode
       this.currentMode = mode
+      // 统计：游戏模式切换
+      if (fromMode !== mode) {
+        import('@/js/utils/analytics.js').then(({ trackGameModeChanged }) => {
+          trackGameModeChanged(fromMode, mode)
+        })
+      }
     },
     setSelectedBuilding(payload) {
       this.selectedBuilding = payload
@@ -352,7 +359,14 @@ export const useGameState = defineStore('gameState', {
       this.language = lang
     },
     setGameSpeed(speed) {
+      const fromSpeed = this.gameSpeed
       this.gameSpeed = Math.max(0.1, Math.min(5.0, speed)) // 限制在0.1-5.0倍速之间
+      // 统计：游戏速度调整
+      if (fromSpeed !== this.gameSpeed) {
+        import('@/js/utils/analytics.js').then(({ trackGameSpeedChanged }) => {
+          trackGameSpeedChanged(fromSpeed, this.gameSpeed)
+        })
+      }
     },
     removeToast(id) {
       this.toastQueue = this.toastQueue.filter(t => t.id !== id)

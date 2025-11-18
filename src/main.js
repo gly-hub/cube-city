@@ -6,6 +6,7 @@ import App from './App.vue'
 import en from './assets/i18n/en.json'
 import zh from './assets/i18n/zh.json'
 import { useGameState } from './stores/useGameState.js'
+import { initGoogleAnalytics, initSessionTracker, trackPageView } from './js/utils/analytics.js'
 import './css/global.css'
 import './scss/global.scss'
 import './scss/index.scss'
@@ -16,6 +17,15 @@ const i18n = createI18n({
   fallbackLocale: 'zh',
   messages: { zh, en },
 })
+
+// 初始化 Google Analytics
+initGoogleAnalytics()
+
+// 初始化停留时长跟踪
+initSessionTracker()
+
+// 发送初始页面浏览
+trackPageView(window.location.pathname, document.title)
 
 const app = createApp(App)
 const pinia = createPinia()

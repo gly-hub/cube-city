@@ -103,6 +103,11 @@ export default class LevelSystem {
         : `🎉 Level ${level} unlocked!`,
       type: 'success',
     })
+
+    // 统计：关卡解锁
+    import('@/js/utils/analytics.js').then(({ trackLevelUnlocked }) => {
+      trackLevelUnlocked(level)
+    })
   }
 
   /**
@@ -131,6 +136,11 @@ export default class LevelSystem {
     eventBus.emit('level:switched', {
       level,
       config: levelConfig,
+    })
+
+    // 统计：关卡切换
+    import('@/js/utils/analytics.js').then(({ trackLevelSwitched }) => {
+      trackLevelSwitched(this.gameState.currentLevel || 1, level)
     })
 
     return true

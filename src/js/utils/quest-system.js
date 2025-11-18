@@ -354,6 +354,11 @@ export default class QuestSystem {
         quest,
         rewards: quest.rewards,
       })
+
+      // 统计：任务完成
+      import('@/js/utils/analytics.js').then(({ trackQuestCompleted }) => {
+        trackQuestCompleted(questId, quest.name[this.gameState.language] || questId, quest.rewards)
+      })
       
       // 更新 Pinia 状态
       this.gameState.completeQuest(questId)

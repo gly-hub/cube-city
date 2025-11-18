@@ -451,6 +451,15 @@ export default class AchievementSystem {
         rewards: achievement.rewards,
       })
 
+      // 统计：成就解锁
+      import('@/js/utils/analytics.js').then(({ trackAchievementUnlocked }) => {
+        trackAchievementUnlocked(
+          achievementId,
+          achievement.name[this.gameState.language] || achievementId,
+          achievement.rewards.meritPoints || 0
+        )
+      })
+
       // 显示解锁通知
       eventBus.emit('toast:add', {
         message: this.gameState.language === 'zh'

@@ -157,6 +157,11 @@ export default class TechSystem {
       tech,
     })
 
+    // 统计：科技研究
+    import('@/js/utils/analytics.js').then(({ trackTechResearched }) => {
+      trackTechResearched(techId, tile.building, tech.cost)
+    })
+
     // 显示成功提示
     const message = this.gameState.language === 'zh'
       ? `成功研发：${tech.name.zh}`

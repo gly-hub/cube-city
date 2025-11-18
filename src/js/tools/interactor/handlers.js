@@ -78,6 +78,12 @@ export function handleBuildMode(ctx, tile) {
     building: { type: buildingTypeToBuild, level: buildingLevelToBuild },
     tile: { x, y },
   })
+
+  // 统计：建筑建造
+  import('@/js/utils/analytics.js').then(({ trackBuildingBuilt }) => {
+    const cost = BUILDING_DATA[buildingTypeToBuild]?.levels[buildingLevelToBuild]?.cost || 0
+    trackBuildingBuilt(buildingTypeToBuild, buildingLevelToBuild, cost)
+  })
 }
 
 /**
@@ -263,6 +269,11 @@ export function confirmUpgrade(ctx) {
     level: newBuilding.level,
   })
 
+  // 统计：建筑升级
+  import('@/js/utils/analytics.js').then(({ trackBuildingUpgraded }) => {
+    trackBuildingUpgraded(building.type, building.level, newBuilding.level, upgradeCost)
+  })
+
       const message = ctx.gameState.language === 'zh'
         ? '建筑升级成功！'
         : 'Building upgraded successfully!'
@@ -287,6 +298,13 @@ export function confirmDemolish(ctx) {
     tile.removeBuilding()
     showBuildingRemovedToast(building.type, tile, building.level, ctx.gameState)
     updateAdjacentRoads(tile, ctx.experience.world.city)
+
+    // 统计：建筑拆除
+    import('@/js/utils/analytics.js').then(({ trackBuildingDemolished }) => {
+      const levelData = BUILDING_DATA[building.type]?.levels[building.level]
+      const refund = levelData?.cost ? Math.floor(levelData.cost * 0.5) : 0 // 假设退款50%
+      trackBuildingDemolished(building.type, building.level, refund)
+    })
   }
 }
 
@@ -298,6 +316,7 @@ export function confirmRelocate(ctx) {
   const sourceTile = ctx.relocateFirst
   const destTile = ctx.relocateSecond
   if (sourceTile && destTile) {
+    const building = sourceTile.buildingInstance
     // 交换 metadata
     const srcData = { ...ctx.gameState.getTile(sourceTile.x, sourceTile.y) }
     const dstData = { ...ctx.gameState.getTile(destTile.x, destTile.y) }
@@ -310,6 +329,13 @@ export function confirmRelocate(ctx) {
     showToast('info', message)
     updateAdjacentRoads(sourceTile, ctx.experience.world.city)
     updateAdjacentRoads(destTile, ctx.experience.world.city)
+
+    // 统计：建筑搬迁
+    if (building) {
+      import('@/js/utils/analytics.js').then(({ trackBuildingRelocated }) => {
+        trackBuildingRelocated(building.type, building.level, 100) // 搬迁成本固定100
+      })
+    }
   }
 }
 
