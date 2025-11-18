@@ -1,5 +1,5 @@
 <template>
-  <aside class="w-80 industrial-panel shadow-industrial z-40 flex flex-col h-full overflow-hidden">
+  <aside class="industrial-panel shadow-industrial z-40 flex flex-col h-full overflow-hidden" :class="$attrs.class || 'w-80'">
     <!-- 单位详情区域（可折叠） -->
     <div class="flex-1 overflow-hidden flex flex-col min-h-0 border-b border-gray-700">
       <div class="p-2 border-b border-gray-700 flex items-center justify-between flex-shrink-0">

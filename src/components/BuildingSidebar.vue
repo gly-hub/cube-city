@@ -73,7 +73,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <aside class="w-72 industrial-panel shadow-industrial overflow-y-auto relative z-[10] custom-scrollbar">
+  <aside class="industrial-panel shadow-industrial overflow-y-auto relative z-[10] custom-scrollbar" :class="$attrs.class || 'w-72'">
     <div class="p-4">
       <h2 class="text-lg font-bold text-industrial-accent uppercase tracking-wide mb-4 border-b border-gray-600 pb-2">
         <span class="neon-text">{{ $t('buildingSidebar.constructionUnits') }}</span>
