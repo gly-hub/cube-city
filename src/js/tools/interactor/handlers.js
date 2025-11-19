@@ -286,8 +286,12 @@ export function confirmUpgrade(ctx) {
  */
 export function confirmDemolish(ctx) {
   const tile = ctx.selected
+  // 安全检查：确保 tile 和 buildingInstance 存在
+  if (!tile) {
+    return
+  }
   const building = tile.buildingInstance
-  if (tile && building) {
+  if (building) {
     // 这里才修改 metadata
     ctx.gameState.setTile(tile.x, tile.y, {
       type: 'ground',

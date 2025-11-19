@@ -27,37 +27,44 @@ export default class Road extends Building {
   refreshView(city) {
     // 建筑是作为子对象添加到Tile上的，所以它的parent就是Tile实例
     const tile = this.parent
-    if (!tile)
+    if (!tile || !city)
       return
 
     // 支持内城和外城的 tile 命名格式
     // 内城: Tile-${x}-${y}
     // 外城: TDTile-${x}-${y}
     // 两种格式都是 split('-') 后取 slice(1) 得到坐标
-    const [x, y] = tile.name.split('-').slice(1).map(Number)
+    const nameParts = tile.name.split('-')
+    if (nameParts.length < 3) {
+      console.warn('无法解析 tile 名称:', tile.name)
+      return
+    }
+    const [x, y] = nameParts.slice(1).map(Number)
 
     // 检查相邻地块的建筑类型
     // 对于外城，需要检查 tile.type === 'road' || 'start' || 'end'
-    const topTile = city.getTile(x, y - 1)
-    const bottomTile = city.getTile(x, y + 1)
-    const leftTile = city.getTile(x - 1, y)
-    const rightTile = city.getTile(x + 1, y)
+    // 安全获取相邻 tile，如果不存在则返回 null
+    const topTile = city.getTile ? city.getTile(x, y - 1) : null
+    const bottomTile = city.getTile ? city.getTile(x, y + 1) : null
+    const leftTile = city.getTile ? city.getTile(x - 1, y) : null
+    const rightTile = city.getTile ? city.getTile(x + 1, y) : null
     
     // 检查相邻地块是否有道路（支持内城和外城）
+    // 使用安全的可选链，确保 tile 存在后再访问其属性
     const top = topTile && (
-      topTile.buildingInstance?.type === 'road' || 
+      (topTile.buildingInstance && topTile.buildingInstance.type === 'road') || 
       (topTile.type && (topTile.type === 'road' || topTile.type === 'start' || topTile.type === 'end'))
     )
     const bottom = bottomTile && (
-      bottomTile.buildingInstance?.type === 'road' || 
+      (bottomTile.buildingInstance && bottomTile.buildingInstance.type === 'road') || 
       (bottomTile.type && (bottomTile.type === 'road' || bottomTile.type === 'start' || bottomTile.type === 'end'))
     )
     const left = leftTile && (
-      leftTile.buildingInstance?.type === 'road' || 
+      (leftTile.buildingInstance && leftTile.buildingInstance.type === 'road') || 
       (leftTile.type && (leftTile.type === 'road' || leftTile.type === 'start' || leftTile.type === 'end'))
     )
     const right = rightTile && (
-      rightTile.buildingInstance?.type === 'road' || 
+      (rightTile.buildingInstance && rightTile.buildingInstance.type === 'road') || 
       (rightTile.type && (rightTile.type === 'road' || rightTile.type === 'start' || rightTile.type === 'end'))
     )
 

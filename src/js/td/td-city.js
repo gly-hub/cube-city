@@ -16,8 +16,8 @@ export default class TDCity {
     this.buildings = this.config.buildings || []
 
     // 外城地皮专用 Group
+    // 注意：不直接添加到 scene，而是由 TowerDefenseWorld 管理
     this.root = new THREE.Group()
-    this.scene.add(this.root)
     this.root.visible = false
 
     // 存储所有 tile

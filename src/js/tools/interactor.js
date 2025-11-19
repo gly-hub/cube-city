@@ -175,6 +175,11 @@ export default class Interactor {
     if (!action)
       return
 
+    // 只处理内城（CITY）场景的操作，外城（TD）场景由 TowerDefenseWorld 处理
+    if (this.gameState.currentScene !== 'CITY') {
+      return
+    }
+
     switch (action) {
       case 'upgrade':
         confirmUpgrade(this)

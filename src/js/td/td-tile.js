@@ -19,6 +19,9 @@ export default class TDTile extends SimObject {
     
     this.experience = experience
     this.resources = resources
+    // 保存原始坐标（用于查找）- 使用 _tileX 和 _tileY 避免与 SimObject 的只读 getter 冲突
+    this._tileX = x
+    this._tileY = y
     this.name = `TDTile-${x}-${y}`
     this.type = type
     this.hasTower = hasTower
@@ -133,7 +136,7 @@ export default class TDTile extends SimObject {
     const roadInstance = createBuilding('road', 1, 0, {
       buildingData: null,
       levelData: null,
-      position: { x: this.x, y: this.y }
+      position: { x: this._tileX, y: this._tileY }
     })
     if (roadInstance) {
       this.buildingInstance = roadInstance
@@ -167,9 +170,59 @@ export default class TDTile extends SimObject {
 
   removeTower() {
     if (this.towerInstance) {
-      this.grassMesh.remove(this.towerInstance)
+      console.log('开始移除防御塔，towerInstance:', this.towerInstance)
+      console.log('防御塔的父级:', this.towerInstance.parent)
+      console.log('grassMesh:', this.grassMesh)
+      
+      // 确保从 grassMesh 中移除（防御塔是通过 setTower 添加到 grassMesh 的）
+      if (this.grassMesh && this.grassMesh.children) {
+        const index = this.grassMesh.children.indexOf(this.towerInstance)
+        if (index > -1) {
+          console.log('从 grassMesh 中移除防御塔，索引:', index)
+          this.grassMesh.remove(this.towerInstance)
+        } else {
+          console.warn('防御塔不在 grassMesh.children 中')
+        }
+      }
+      
+      // 同时也从父级移除（以防万一）
+      if (this.towerInstance.parent) {
+        console.log('从父级移除防御塔，父级:', this.towerInstance.parent)
+        this.towerInstance.parent.remove(this.towerInstance)
+      }
+      
+      // 清理几何体和材质
+      if (this.towerInstance.geometry) {
+        this.towerInstance.geometry.dispose()
+      }
+      if (this.towerInstance.material) {
+        if (Array.isArray(this.towerInstance.material)) {
+          this.towerInstance.material.forEach(mat => mat.dispose())
+        } else {
+          this.towerInstance.material.dispose()
+        }
+      }
+      
+      // 如果是 Group，清理所有子对象
+      if (this.towerInstance.children && this.towerInstance.children.length > 0) {
+        this.towerInstance.children.forEach(child => {
+          if (child.geometry) child.geometry.dispose()
+          if (child.material) {
+            if (Array.isArray(child.material)) {
+              child.material.forEach(mat => mat.dispose())
+            } else {
+              child.material.dispose()
+            }
+          }
+        })
+        this.towerInstance.clear()
+      }
+      
       this.towerInstance = null
       this.hasTower = false
+      console.log('防御塔移除完成')
+    } else {
+      console.warn('removeTower 被调用，但 towerInstance 为 null')
     }
   }
 
@@ -179,7 +232,7 @@ export default class TDTile extends SimObject {
     const buildingInstance = createBuilding(buildingType, level, direction, {
       buildingData: null,
       levelData: null,
-      position: { x: this.x, y: this.y }
+      position: { x: this._tileX, y: this._tileY }
     })
     if (buildingInstance) {
       this.decorativeBuilding = buildingInstance

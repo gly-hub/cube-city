@@ -26,6 +26,8 @@ const { isMobile, isMobileDevice } = useMobile()
 
 const showDialog = ref(false)
 const dialogData = ref({})
+// 保存外城传入的 onConfirm 回调
+const pendingOnConfirm = ref(null)
 const { getDialogConfig, handleBuildingTransaction } = useBuilding()
 const gameState = useGameState()
 const { gameSpeed } = storeToRefs(gameState)
@@ -77,21 +79,45 @@ let speedWatcher = null
 // 只监听一次即可
 if (!window.__confirmDialogListenerAdded) {
   eventBus.on('ui:confirm-action', (data) => {
-    dialogData.value = getDialogConfig(data.action, data.buildingType, data.buildingLevel)
+    // 如果有 onConfirm 回调（外城的拆除、升级等操作），保存它
+    if (data.onConfirm && typeof data.onConfirm === 'function') {
+      pendingOnConfirm.value = data.onConfirm
+      // 外城的确认操作，使用传入的 title 和 message
+      dialogData.value = {
+        action: data.action || 'demolish',
+        title: data.title || '确认操作',
+        message: data.message || '确定要执行此操作吗？',
+        buildingType: null,
+        buildingLevel: null
+      }
+    } else {
+      // 内城的确认操作，使用旧的逻辑
+      pendingOnConfirm.value = null
+      dialogData.value = getDialogConfig(data.action, data.buildingType, data.buildingLevel)
+    }
     showDialog.value = true
   })
   window.__confirmDialogListenerAdded = true
 }
 
 function handleConfirm() {
-  const result = handleBuildingTransaction(dialogData.value.action, dialogData.value.buildingType, dialogData.value.buildingLevel)
-  if (result) {
-    eventBus.emit('ui:action-confirmed', dialogData.value.action)
+  // 如果有外城的 onConfirm 回调，执行它
+  if (pendingOnConfirm.value && typeof pendingOnConfirm.value === 'function') {
+    pendingOnConfirm.value()
+    pendingOnConfirm.value = null
+  } else {
+    // 否则执行内城的建筑交易逻辑
+    const result = handleBuildingTransaction(dialogData.value.action, dialogData.value.buildingType, dialogData.value.buildingLevel)
+    if (result) {
+      eventBus.emit('ui:action-confirmed', dialogData.value.action)
+    }
   }
   showDialog.value = false
 }
 
 function handleCancel() {
+  // 清除外城的 onConfirm 回调
+  pendingOnConfirm.value = null
   showDialog.value = false
 }
 

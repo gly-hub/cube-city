@@ -57,6 +57,12 @@ export default class Experience {
       console.log('Scene switching to:', scene)
       this.switchScene(scene)
     })
+    
+    // 初始化时根据当前场景设置显示状态
+    // 延迟执行，确保 world 和 tdWorld 都已初始化
+    setTimeout(() => {
+      this.switchScene(this.gameState.currentScene)
+    }, 100)
 
     // 初始化关卡系统、任务系统、成就系统和科技系统
     this.levelSystem = new LevelSystem()

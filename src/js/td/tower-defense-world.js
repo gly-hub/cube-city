@@ -32,21 +32,40 @@ export default class TowerDefenseWorld {
     this.spawnInterval = 1500
     this.lastSpawnTime = 0
 
+    // 拖拽状态
+    this.draggingTowerType = null
+    this.dragPreview = null
+
     // 射线检测器
     this.raycaster = new THREE.Raycaster()
 
     // 初始化
     this.init()
     
-    // 监听点击事件
-    window.addEventListener('click', this.handleClick.bind(this))
+    // 绑定事件处理方法（保存引用以便后续移除）
+    this.boundHandleClick = this.handleClick.bind(this)
+    this.boundHandleDragOver = this.handleDragOver.bind(this)
+    this.boundHandleDrop = this.handleDrop.bind(this)
+    this.boundHandleDragLeave = this.handleDragLeave.bind(this)
+    
+    // 注意：事件监听器在 show() 时添加，在 hide() 时移除，避免干扰内城
+    this.eventListenersAttached = false
     
     // 监听事件
     this.experience.eventBus.on('td:start-wave', () => {
       this.startWave()
     })
-    this.experience.eventBus.on('td:select-tower-type', (towerType) => {
-      // 选中塔类型时，可以高亮可放置区域
+    this.experience.eventBus.on('td:drag-start', (towerType) => {
+      this.draggingTowerType = towerType
+    })
+    this.experience.eventBus.on('td:drag-end', () => {
+      this.draggingTowerType = null
+    })
+    this.experience.eventBus.on('td:upgrade-tower', () => {
+      this.upgradeTower()
+    })
+    this.experience.eventBus.on('td:demolish-tower', () => {
+      this.demolishSelectedTower()
     })
   }
 
@@ -72,21 +91,296 @@ export default class TowerDefenseWorld {
   createCity() {
     console.log('创建外城城市')
     this.city = new TDCity()
+    // 将 city 的 root 添加到 tdWorld 的 root
     this.root.add(this.city.root)
     // 路径点从 city 中获取
     this.pathPoints = this.city.pathPoints
     console.log('外城创建完成，路径点数量:', this.pathPoints.length)
+    console.log('外城 root 层级:', this.root.children.length, 'city root 层级:', this.city.root.children.length)
   }
 
-  handleClick() {
+  handleClick(event) {
+    // 检查当前场景是否为外城
+    if (this.gameState.currentScene !== 'TD') {
+      return
+    }
+    
     if (!this.root.visible || !this.city) {
-      console.log('外城未显示或城市未创建', { visible: this.root.visible, city: !!this.city })
       return
     }
 
+    // 防止事件冒泡（避免与其他点击处理冲突）
+    if (event) {
+      event.stopPropagation()
+    }
+
+    // 防止在处理过程中重复触发
+    if (this.isHandlingClick) {
+      return
+    }
+    this.isHandlingClick = true
+
+    try {
+      this.raycaster.setFromCamera(this.iMouse.normalizedMouse, this.experience.camera.instance)
+    
+      // 检测点击的对象：同时检测 tile 和 tower
+      const allObjects = []
+      
+      // 添加所有 tile 的 grassMesh
+      this.city.meshes.forEach(row => {
+        row.forEach(tile => {
+          if (tile.grassMesh) {
+            allObjects.push(tile.grassMesh)
+          }
+          // 如果有防御塔，也添加防御塔 mesh（优先检测）
+          if (tile.hasTower && tile.towerInstance) {
+            allObjects.push(tile.towerInstance)
+          }
+        })
+      })
+
+      const intersects = this.raycaster.intersectObjects(allObjects, true)
+
+      if (intersects.length === 0) {
+        // 点击空地：清除选择
+        setTimeout(() => {
+          this.gameState.setSelectedTower(null)
+        }, 0)
+        this.isHandlingClick = false
+        return
+      }
+
+      const clickedObject = intersects[0].object
+      let tile = null
+      
+      // 如果点击的是防御塔，通过 userData 或父级找到 tile
+      if (clickedObject.userData && clickedObject.userData.tile) {
+        tile = clickedObject.userData.tile
+      } else if (clickedObject.userData && clickedObject.userData instanceof TDTile) {
+        tile = clickedObject.userData
+      } else {
+        // 尝试从父级查找
+        let parent = clickedObject.parent
+        while (parent) {
+          if (parent.userData && parent.userData instanceof TDTile) {
+            tile = parent.userData
+            break
+          }
+          parent = parent.parent
+        }
+      }
+      
+      // 如果还是找不到，尝试从 grassMesh 的 userData 获取
+      if (!tile && clickedObject.userData) {
+        tile = clickedObject.userData
+      }
+
+      if (!tile || !(tile instanceof TDTile)) {
+        this.isHandlingClick = false
+        return
+      }
+
+      // 简化的点击逻辑：点击防御塔显示详情，点击空地清除选择
+      if (tile.hasTower && tile.towerInstance) {
+        // 点击防御塔：显示详情
+        console.log('点击防御塔，坐标:', tile._tileX, tile._tileY)
+        this.handleSelectTower(tile)
+      } else {
+        // 点击空地：清除选择
+        setTimeout(() => {
+          this.gameState.setSelectedTower(null)
+        }, 0)
+      }
+    } finally {
+      // 立即重置标志，但状态更新已通过 setTimeout 延迟
+      this.isHandlingClick = false
+    }
+  }
+
+  // 选中防御塔（显示详情）
+  handleSelectTower(tile) {
+    const tower = tile.towerInstance
+    if (!tower) {
+      console.warn('防御塔实例不存在')
+      return
+    }
+    
+    // 获取防御塔的实际数据
+    const towerType = tower.userData.type
+    const towerLevel = tower.userData.level || 1
+    
+    // 只保存必要的数据，避免循环引用导致响应式死循环
+    const towerData = {
+      id: towerType,
+      name: this.getTowerName(towerType),
+      damage: tower.userData.damage || 20,
+      range: tower.userData.range || 5,
+      cooldown: tower.userData.cooldown || 1000,
+      level: towerLevel,
+      // 使用实际的建造成本（根据类型和等级计算）
+      cost: this.getTowerCost(towerType, towerLevel),
+      // 只保存坐标，不保存整个对象
+      tileX: tile._tileX,
+      tileY: tile._tileY,
+      // 保存弱引用标识，用于后续查找
+      _tileId: `${tile._tileX}-${tile._tileY}`,
+      _towerId: tower.uuid || tower.id
+    }
+    
+    console.log('选中防御塔:', towerData)
+    
+    // 延迟状态更新，避免在事件处理过程中触发响应式循环
+    setTimeout(() => {
+      this.gameState.setSelectedTower(towerData)
+      this.gameState.setSelectedPosition({ x: tile._tileX, z: tile._tileY })
+    }, 0)
+  }
+
+  // 选择模式：选中防御塔（保留兼容性）
+  handleSelectMode(tile) {
+    if (tile.hasTower && tile.towerInstance) {
+      const tower = tile.towerInstance
+      // 只保存必要的数据，避免循环引用导致响应式死循环
+      // 不保存 tile 和 tower 对象本身，而是保存坐标和引用
+      const towerData = {
+        id: tower.userData.type,
+        name: this.getTowerName(tower.userData.type),
+        damage: tower.userData.damage,
+        range: tower.userData.range,
+        cooldown: tower.userData.cooldown,
+        level: tower.userData.level || 1,
+        cost: this.getTowerCost(tower.userData.type, tower.userData.level || 1),
+        // 只保存坐标，不保存整个对象
+        tileX: tile._tileX,
+        tileY: tile._tileY,
+        // 保存弱引用标识，用于后续查找
+        _tileId: `${tile._tileX}-${tile._tileY}`,
+        _towerId: tower.uuid || tower.id
+      }
+      
+      // 延迟状态更新，避免在事件处理过程中触发响应式循环
+      setTimeout(() => {
+        this.gameState.setSelectedTower(towerData)
+        this.gameState.setSelectedPosition({ x: tile._tileX, z: tile._tileY })
+      }, 0)
+    } else {
+      // 点击空地，清除选择
+      setTimeout(() => {
+        this.gameState.setSelectedTower(null)
+      }, 0)
+    }
+  }
+
+  // 建造模式：放置防御塔
+  handleBuildMode(tile) {
+    if (tile.type !== 'base' || tile.hasTower) {
+      this.experience.eventBus.emit('toast:add', {
+        message: '无法在此位置放置防御塔',
+        type: 'warning'
+      })
+      return
+    }
+    this.placeTower(tile)
+  }
+
+  // 拆除模式：拆除防御塔
+  handleDemolishMode(tile) {
+    if (!tile.hasTower || !tile.towerInstance) {
+      this.experience.eventBus.emit('toast:add', {
+        message: '该位置没有防御塔',
+        type: 'info'
+      })
+      return
+    }
+
+    const tower = tile.towerInstance
+    const towerType = tower.userData.type
+    const towerLevel = tower.userData.level || 1
+    const refund = Math.floor(this.getTowerCost(towerType, towerLevel) * 0.5) // 50% 退款
+
+    // 确认对话框
+    this.experience.eventBus.emit('ui:confirm-action', {
+      action: 'demolish',
+      title: '确认拆除',
+      message: `确定要拆除 ${this.getTowerName(towerType)} 吗？将获得 ${refund} 金币退款。`,
+      onConfirm: () => {
+        // 退款
+        this.gameState.updateCredits(refund)
+        // 移除防御塔
+        tile.removeTower()
+        // 从 towers 数组中移除
+        const index = this.towers.indexOf(tower)
+        if (index > -1) {
+          this.towers.splice(index, 1)
+        }
+        // 清除选择
+        this.gameState.setSelectedTower(null)
+        this.experience.eventBus.emit('toast:add', {
+          message: `已拆除，获得 ${refund} 金币`,
+          type: 'success'
+        })
+      }
+    })
+  }
+
+  // 获取防御塔名称
+  getTowerName(towerType) {
+    const names = {
+      basic: { zh: '基础塔', en: 'Basic Tower' },
+      rapid: { zh: '速射塔', en: 'Rapid Tower' },
+      heavy: { zh: '重炮塔', en: 'Heavy Tower' }
+    }
+    return names[towerType]?.[this.gameState.language] || towerType
+  }
+
+  // 获取防御塔成本
+  getTowerCost(towerType, level = 1) {
+    const baseCosts = {
+      basic: 100,
+      rapid: 150,
+      heavy: 200
+    }
+    const baseCost = baseCosts[towerType] || 100
+    // 升级成本 = 基础成本 * 等级 * 1.5
+    return Math.floor(baseCost * level * 1.5)
+  }
+
+  // 拖拽悬停处理
+  handleDragOver(event) {
+    if (!this.draggingTowerType || this.gameState.currentScene !== 'TD') {
+      return
+    }
+    if (!this.root.visible || !this.city) {
+      return
+    }
+    event.preventDefault()
+    event.dataTransfer.dropEffect = 'copy'
+    
+    // 更新鼠标位置（用于射线检测）
+    const rect = this.experience.canvas.getBoundingClientRect()
+    const mouse = new THREE.Vector2()
+    mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1
+    mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1
+    
+    // 临时更新 iMouse 的 normalizedMouse（用于预览）
+    this.iMouse.normalizedMouse.x = mouse.x
+    this.iMouse.normalizedMouse.y = mouse.y
+  }
+
+  // 拖拽放置处理
+  handleDrop(event) {
+    if (!this.draggingTowerType || this.gameState.currentScene !== 'TD') {
+      return
+    }
+    if (!this.root.visible || !this.city) {
+      this.draggingTowerType = null
+      return
+    }
+    event.preventDefault()
+    
+    // 射线检测找到放置位置
     this.raycaster.setFromCamera(this.iMouse.normalizedMouse, this.experience.camera.instance)
     
-    // 检测点击的是哪个 tile
     const allTiles = []
     this.city.meshes.forEach(row => {
       row.forEach(tile => {
@@ -94,51 +388,60 @@ export default class TowerDefenseWorld {
       })
     })
 
-    console.log('检测到的 tile 数量:', allTiles.length)
-
     const intersects = this.raycaster.intersectObjects(allTiles)
+    if (intersects.length === 0) {
+      this.draggingTowerType = null
+      return
+    }
 
-    console.log('射线检测结果:', intersects.length, '个交点')
+    const tileMesh = intersects[0].object
+    const tile = tileMesh.userData
 
-    if (intersects.length > 0) {
-      const tileMesh = intersects[0].object
-      const tile = tileMesh.userData
+    if (!tile || !(tile instanceof TDTile)) {
+      this.draggingTowerType = null
+      return
+    }
 
-      console.log('点击的 tile:', tile, '类型:', tile?.type, '已有塔:', tile?.hasTower)
+    // 检查是否可以放置
+    if (tile.type !== 'base' || tile.hasTower) {
+      this.experience.eventBus.emit('toast:add', {
+        message: '无法在此位置放置防御塔',
+        type: 'warning'
+      })
+      this.draggingTowerType = null
+      return
+    }
 
-      if (tile && tile instanceof TDTile && tile.type === 'base' && !tile.hasTower) {
-        console.log('可以放置防御塔')
-        this.placeTower(tile)
-      } else {
-        console.log('无法放置防御塔:', {
-          isTDTile: tile instanceof TDTile,
-          type: tile?.type,
-          hasTower: tile?.hasTower
-        })
+    // 检查金币
+    if (this.gameState.credits < this.draggingTowerType.cost) {
+      this.experience.eventBus.emit('toast:add', {
+        message: `金币不足！需要 ${this.draggingTowerType.cost} 金币`,
+        type: 'error'
+      })
+      this.draggingTowerType = null
+      return
+    }
+
+    // 放置防御塔
+    this.placeTowerFromDrag(tile, this.draggingTowerType)
+    this.draggingTowerType = null
+  }
+
+  // 拖拽离开处理
+  handleDragLeave(event) {
+    // 清除拖拽状态
+    if (this.draggingTowerType) {
+      // 只有在真正离开 canvas 时才清除
+      const rect = this.experience.canvas.getBoundingClientRect()
+      if (event.clientX < rect.left || event.clientX > rect.right || 
+          event.clientY < rect.top || event.clientY > rect.bottom) {
+        this.draggingTowerType = null
       }
     }
   }
 
-  placeTower(tile) {
-    const towerType = this.gameState.selectedTowerType
-    console.log('尝试放置防御塔，选中的类型:', towerType)
-    if (!towerType) {
-      console.log('未选择防御塔类型')
-      this.experience.eventBus.emit('toast:add', {
-        message: '请先选择防御塔类型',
-        type: 'warning'
-      })
-      return
-    }
-
-    if (this.gameState.credits < towerType.cost) {
-      this.experience.eventBus.emit('toast:add', {
-        message: `金币不足！需要 ${towerType.cost} 金币`,
-        type: 'error'
-      })
-      return
-    }
-
+  // 从拖拽放置防御塔
+  placeTowerFromDrag(tile, towerType) {
     // 扣除金币
     this.gameState.updateCredits(-towerType.cost)
 
@@ -157,12 +460,16 @@ export default class TowerDefenseWorld {
       cooldown: 1000,
       lastAttackTime: 0,
       type: towerType.id,
+      level: 1, // 初始等级为 1
       tile: tile // 保存对 tile 的引用
     }
 
     // 将塔添加到 tile（这样塔会跟随 tile 的位置）
     tile.setTower(tower)
     tile.hasTower = true
+    
+    // 在 tower 的 userData 中保存对 tile 的引用（用于点击检测）
+    tower.userData.tile = tile
     
     // 同时添加到 towers 数组用于更新逻辑
     this.towers.push(tower)
@@ -173,8 +480,33 @@ export default class TowerDefenseWorld {
       gsap.to(tower.scale, { x: 1, y: 1, z: 1, duration: 0.5, ease: 'back.out(1.7)' })
     })
 
-    // 清除选中状态
-    this.gameState.setSelectedTowerType(null)
+    // 延迟状态更新，避免在事件处理过程中触发响应式循环
+    setTimeout(() => {
+      // 只保存必要的数据，避免循环引用导致响应式死循环
+      const towerData = {
+        id: towerType.id,
+        name: this.getTowerName(towerType.id),
+        damage: towerType.damage,
+        range: towerType.range,
+        cooldown: 1000,
+        level: 1,
+        cost: towerType.cost,
+        // 只保存坐标，不保存整个对象
+        tileX: tile._tileX,
+        tileY: tile._tileY,
+        // 保存弱引用标识，用于后续查找
+        _tileId: `${tile._tileX}-${tile._tileY}`,
+        _towerId: tower.uuid || tower.id
+      }
+      
+      // 自动选中刚放置的防御塔
+      this.gameState.setSelectedTower(towerData)
+      
+      this.experience.eventBus.emit('toast:add', {
+        message: `已放置 ${this.getTowerName(towerType.id)}`,
+        type: 'success'
+      })
+    }, 0)
   }
 
   startWave() {
@@ -306,6 +638,175 @@ export default class TowerDefenseWorld {
     this.resetGame()
   }
 
+  // 升级防御塔
+  upgradeTower() {
+    const selectedTower = this.gameState.selectedTower
+    if (!selectedTower || !selectedTower._tileId) {
+      this.experience.eventBus.emit('toast:add', {
+        message: '请先选择一个防御塔',
+        type: 'warning'
+      })
+      return
+    }
+
+    // 通过坐标查找 tile 和 tower
+    console.log('查找防御塔，坐标:', selectedTower.tileX, selectedTower.tileY)
+    const tile = this.city.getTile(selectedTower.tileX, selectedTower.tileY)
+    console.log('找到的 tile:', tile)
+    
+    if (!tile) {
+      console.error('Tile 不存在，坐标:', selectedTower.tileX, selectedTower.tileY)
+      this.experience.eventBus.emit('toast:add', {
+        message: `防御塔不存在：无法找到坐标 (${selectedTower.tileX}, ${selectedTower.tileY}) 的 tile`,
+        type: 'error'
+      })
+      return
+    }
+    
+    if (!tile.hasTower || !tile.towerInstance) {
+      console.error('Tile 上没有防御塔，hasTower:', tile.hasTower, 'towerInstance:', tile.towerInstance)
+      this.experience.eventBus.emit('toast:add', {
+        message: '该位置没有防御塔',
+        type: 'error'
+      })
+      return
+    }
+
+    const tower = tile.towerInstance
+    const currentLevel = tower.userData.level || 1
+    const nextLevel = currentLevel + 1
+    const upgradeCost = this.getTowerCost(tower.userData.type, nextLevel) - this.getTowerCost(tower.userData.type, currentLevel)
+
+    if (this.gameState.credits < upgradeCost) {
+      this.experience.eventBus.emit('toast:add', {
+        message: `金币不足！升级需要 ${upgradeCost} 金币`,
+        type: 'error'
+      })
+      return
+    }
+
+    // 确认升级
+    this.experience.eventBus.emit('ui:confirm-action', {
+      action: 'upgrade',
+      title: '确认升级',
+      message: `确定要升级到 ${nextLevel} 级吗？需要 ${upgradeCost} 金币。`,
+      onConfirm: () => {
+        // 扣除金币
+        this.gameState.updateCredits(-upgradeCost)
+        
+        // 升级防御塔属性
+        tower.userData.level = nextLevel
+        tower.userData.damage = Math.floor(tower.userData.damage * 1.2) // 伤害增加 20%
+        tower.userData.range = tower.userData.range + 0.5 // 范围增加 0.5
+        tower.userData.cooldown = Math.max(500, tower.userData.cooldown - 100) // 冷却减少 100ms
+
+        // 更新选中状态（只保存数据，不保存对象引用）
+        setTimeout(() => {
+          this.gameState.setSelectedTower({
+            ...selectedTower,
+            level: nextLevel,
+            damage: tower.userData.damage,
+            range: tower.userData.range,
+            cooldown: tower.userData.cooldown,
+            cost: this.getTowerCost(tower.userData.type, nextLevel)
+          })
+        }, 0)
+
+        // 升级动画
+        import('gsap').then(({ default: gsap }) => {
+          gsap.to(tower.scale, { x: 1.2, y: 1.2, z: 1.2, duration: 0.2, yoyo: true, repeat: 1 })
+        })
+
+        this.experience.eventBus.emit('toast:add', {
+          message: `防御塔已升级到 ${nextLevel} 级！`,
+          type: 'success'
+        })
+      }
+    })
+  }
+
+  // 拆除选中的防御塔
+  demolishSelectedTower() {
+    const selectedTower = this.gameState.selectedTower
+    if (!selectedTower || !selectedTower._tileId) {
+      this.experience.eventBus.emit('toast:add', {
+        message: '请先选择一个防御塔',
+        type: 'warning'
+      })
+      return
+    }
+
+    // 通过坐标查找 tile 和 tower
+    console.log('拆除防御塔，坐标:', selectedTower.tileX, selectedTower.tileY)
+    const tile = this.city.getTile(selectedTower.tileX, selectedTower.tileY)
+    console.log('找到的 tile:', tile)
+    
+    if (!tile) {
+      console.error('Tile 不存在，坐标:', selectedTower.tileX, selectedTower.tileY)
+      this.experience.eventBus.emit('toast:add', {
+        message: `防御塔不存在：无法找到坐标 (${selectedTower.tileX}, ${selectedTower.tileY}) 的 tile`,
+        type: 'error'
+      })
+      return
+    }
+    
+    if (!tile.hasTower || !tile.towerInstance) {
+      console.error('Tile 上没有防御塔，hasTower:', tile.hasTower, 'towerInstance:', tile.towerInstance)
+      this.experience.eventBus.emit('toast:add', {
+        message: '该位置没有防御塔',
+        type: 'error'
+      })
+      return
+    }
+
+    const tower = tile.towerInstance
+    const towerType = tower.userData.type
+    const towerLevel = tower.userData.level || 1
+    const refund = Math.floor(this.getTowerCost(towerType, towerLevel) * 0.5) // 50% 退款
+
+    // 确认拆除
+    this.experience.eventBus.emit('ui:confirm-action', {
+      action: 'demolish',
+      title: '确认拆除',
+      message: `确定要拆除 ${this.getTowerName(towerType)} 吗？将获得 ${refund} 金币退款。`,
+      onConfirm: () => {
+        console.log('确认拆除防御塔，tile:', tile, 'tower:', tower)
+        console.log('tile.hasTower:', tile.hasTower, 'tile.towerInstance:', tile.towerInstance)
+        
+        // 退款
+        this.gameState.updateCredits(refund)
+        
+        // 从 towers 数组中移除（在 removeTower 之前，因为 removeTower 会清理对象）
+        const index = this.towers.indexOf(tower)
+        if (index > -1) {
+          console.log('从 towers 数组中移除，索引:', index)
+          this.towers.splice(index, 1)
+        } else {
+          console.warn('防御塔不在 towers 数组中')
+        }
+        
+        // 移除防御塔（这会清理几何体和材质）
+        console.log('调用 tile.removeTower()')
+        tile.removeTower()
+        
+        // 验证防御塔是否已被移除
+        console.log('移除后检查 - tile.hasTower:', tile.hasTower, 'tile.towerInstance:', tile.towerInstance)
+        console.log('移除后检查 - grassMesh.children 中是否还有防御塔:', 
+          tile.grassMesh?.children?.some(child => child === tower))
+        
+        // 清除选择
+        setTimeout(() => {
+          this.gameState.setSelectedTower(null)
+        }, 0)
+        
+        this.experience.eventBus.emit('toast:add', {
+          message: `已拆除，获得 ${refund} 金币`,
+          type: 'success'
+        })
+      }
+    })
+  }
+
   resetGame() {
     while(this.enemies.length > 0) {
       this.removeEnemy(0)
@@ -418,12 +919,32 @@ export default class TowerDefenseWorld {
 
   show() {
     console.log('显示外城')
+    console.log('外城 root visible:', this.root.visible, 'city exists:', !!this.city)
+    
+    // 先显示 root
     this.root.visible = true
+    
     if (this.city) {
+      // 确保 city 的 root 也在层级中
+      if (!this.root.children.includes(this.city.root)) {
+        console.warn('city.root 不在 tdWorld.root 中，重新添加')
+        this.root.add(this.city.root)
+      }
+      // 显示 city
       this.city.show()
       console.log('外城城市已显示，tile 数量:', this.city.meshes.length)
+      console.log('city.root visible:', this.city.root.visible, 'city.root children:', this.city.root.children.length)
     } else {
-      console.warn('外城城市未创建')
+      console.warn('外城城市未创建，尝试重新创建')
+      // 如果 city 不存在，尝试重新创建
+      if (this.resources.items.grass) {
+        this.createCity()
+        if (this.city) {
+          this.city.show()
+        }
+      } else {
+        console.error('资源未加载，无法创建外城')
+      }
     }
     
     // 确保环境光显示（外城和内城共用同一个环境系统）
@@ -433,6 +954,16 @@ export default class TowerDefenseWorld {
       if (world.environment.ambientLight) world.environment.ambientLight.visible = true
       if (world.environment.hemisphereLight) world.environment.hemisphereLight.visible = true
     }
+    
+    // 添加事件监听器（只在显示时添加，避免干扰内城）
+    if (!this.eventListenersAttached) {
+      this.experience.canvas.addEventListener('click', this.boundHandleClick)
+      this.experience.canvas.addEventListener('dragover', this.boundHandleDragOver)
+      this.experience.canvas.addEventListener('drop', this.boundHandleDrop)
+      this.experience.canvas.addEventListener('dragleave', this.boundHandleDragLeave)
+      this.eventListenersAttached = true
+      console.log('外城事件监听器已添加')
+    }
   }
 
   hide() {
@@ -440,11 +971,23 @@ export default class TowerDefenseWorld {
     if (this.city) {
       this.city.hide()
     }
+    
+    // 移除事件监听器（隐藏时移除，避免干扰内城）
+    if (this.eventListenersAttached) {
+      this.experience.canvas.removeEventListener('click', this.boundHandleClick)
+      this.experience.canvas.removeEventListener('dragover', this.boundHandleDragOver)
+      this.experience.canvas.removeEventListener('drop', this.boundHandleDrop)
+      this.experience.canvas.removeEventListener('dragleave', this.boundHandleDragLeave)
+      this.eventListenersAttached = false
+      console.log('外城事件监听器已移除')
+    }
+    
     // 注意：不隐藏环境光，因为内城可能也需要使用
   }
 
   destroy() {
-    window.removeEventListener('click', this.handleClick.bind(this))
+    // 确保移除所有事件监听器
+    this.hide()
     this.scene.remove(this.root)
   }
 }
