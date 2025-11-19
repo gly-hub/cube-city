@@ -16,17 +16,17 @@ export const TD_MAP_CONFIG = {
     [0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
     [0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
     [0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0],
-    [0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0],
-    [0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0],
-    [0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0],
-    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0],
-    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0],
-    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1],
-    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+    [0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0],
+    [0, 0, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 0, 0, 0],
+    [0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0],
+    [0, 0, 1, 1, 1, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0],
+    [0, 0, 0, 0, 1, 0, 0, 1, 1, 1, 0, 0, 1, 0, 0, 0],
+    [0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0],
+    [0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0],
+    [0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1],
     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3],
   ],
 
@@ -36,30 +36,30 @@ export const TD_MAP_CONFIG = {
   buildings: [
     // 在路径周围放置一些装饰建筑，增加场景丰富度
     // 第一区域（左上）
-    { x: 1, y: 1, buildingType: 'house', level: 1, direction: 0 },
-    { x: 2, y: 1, buildingType: 'house', level: 1, direction: 90 },
-    { x: 1, y: 5, buildingType: 'shop', level: 1, direction: 0 },
-    { x: 2, y: 6, buildingType: 'shop', level: 1, direction: 180 },
+    // { x: 1, y: 1, buildingType: 'house', level: 1, direction: 0 },
+    // { x: 2, y: 1, buildingType: 'house', level: 1, direction: 90 },
+    // { x: 1, y: 5, buildingType: 'shop', level: 1, direction: 0 },
+    // { x: 2, y: 6, buildingType: 'shop', level: 1, direction: 180 },
 
-    // 第二区域（中上）
-    { x: 4, y: 1, buildingType: 'office', level: 1, direction: 0 },
-    { x: 5, y: 1, buildingType: 'house', level: 1, direction: 90 },
-    { x: 4, y: 6, buildingType: 'shop', level: 1, direction: 0 },
-    { x: 5, y: 7, buildingType: 'house', level: 1, direction: 180 },
+    // // 第二区域（中上）
+    // { x: 4, y: 1, buildingType: 'office', level: 1, direction: 0 },
+    // { x: 5, y: 1, buildingType: 'house', level: 1, direction: 90 },
+    // { x: 4, y: 6, buildingType: 'shop', level: 1, direction: 0 },
+    // { x: 5, y: 7, buildingType: 'house', level: 1, direction: 180 },
 
-    // 第三区域（中下）
-    { x: 7, y: 1, buildingType: 'office', level: 1, direction: 0 },
-    { x: 8, y: 1, buildingType: 'house', level: 1, direction: 90 },
-    { x: 7, y: 11, buildingType: 'shop', level: 1, direction: 0 },
-    { x: 8, y: 12, buildingType: 'house', level: 1, direction: 180 },
+    // // 第三区域（中下）
+    // { x: 7, y: 1, buildingType: 'office', level: 1, direction: 0 },
+    // { x: 8, y: 1, buildingType: 'house', level: 1, direction: 90 },
+    // { x: 7, y: 11, buildingType: 'shop', level: 1, direction: 0 },
+    // { x: 8, y: 12, buildingType: 'house', level: 1, direction: 180 },
 
-    // 第四区域（右下）
-    { x: 10, y: 1, buildingType: 'office', level: 1, direction: 0 },
-    { x: 11, y: 1, buildingType: 'house', level: 1, direction: 90 },
-    { x: 10, y: 11, buildingType: 'shop', level: 1, direction: 0 },
-    { x: 11, y: 12, buildingType: 'house', level: 1, direction: 180 },
-    { x: 12, y: 11, buildingType: 'office', level: 1, direction: 0 },
-    { x: 13, y: 12, buildingType: 'house', level: 1, direction: 90 },
+    // // 第四区域（右下）
+    // { x: 10, y: 1, buildingType: 'office', level: 1, direction: 0 },
+    // { x: 11, y: 1, buildingType: 'house', level: 1, direction: 90 },
+    // { x: 10, y: 11, buildingType: 'shop', level: 1, direction: 0 },
+    // { x: 11, y: 12, buildingType: 'house', level: 1, direction: 180 },
+    // { x: 12, y: 11, buildingType: 'office', level: 1, direction: 0 },
+    // { x: 13, y: 12, buildingType: 'house', level: 1, direction: 90 },
   ],
 }
 
