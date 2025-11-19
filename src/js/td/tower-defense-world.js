@@ -3,6 +3,8 @@ import Experience from '../experience.js'
 import { useGameState } from '@/stores/useGameState.js'
 import TDCity from './td-city.js'
 import TDTile from './td-tile.js'
+import Enemy from './enemy.js'
+import { getWaveComposition } from './enemy-types.js'
 
 export default class TowerDefenseWorld {
   constructor() {
@@ -28,8 +30,11 @@ export default class TowerDefenseWorld {
     this.wave = this.gameState.tdGameData.wave
     this.baseHealth = this.gameState.tdGameData.baseHealth
     this.isWaveActive = this.gameState.tdGameData.isWaveActive
-    this.enemiesToSpawn = 0
-    this.spawnInterval = 1500
+    
+    // 波次怪物配置
+    this.waveComposition = [] // 当前波次的怪物类型和数量
+    this.enemiesToSpawn = []  // 待生成的怪物队列
+    this.spawnInterval = 800  // 怪物生成间隔（毫秒）
     this.lastSpawnTime = 0
     
     // 用于检测是否是刷新后的初始化
@@ -221,13 +226,20 @@ export default class TowerDefenseWorld {
     // ===== 修复：检查波次状态 =====
     // 如果 isWaveActive 为 true，但没有敌人和待生成敌人，说明是从战斗中刷新的
     // 这种情况下，应该重置 isWaveActive，要求用户重新开始当前波次
-    if (this.isWaveActive && this.enemiesToSpawn === 0 && this.enemies.length === 0) {
+    if (this.isWaveActive && this.enemiesToSpawn.length === 0 && this.enemies.length === 0) {
       console.warn('检测到战斗状态异常（战斗中刷新），重置 isWaveActive，需要重新开始当前波次')
       this.isWaveActive = false
       this.gameState.setTDGameData({ isWaveActive: false })
       
       // 通知 UI 层更新状态
       this.experience.eventBus.emit('td:wave-reset', { wave: this.wave })
+    }
+    
+    // ===== 修复：检查基地血量 =====
+    // 如果基地血量为 0，说明游戏已失败，应该重置所有数据
+    if (this.baseHealth <= 0) {
+      console.warn('检测到基地血量为 0，游戏已失败，清除所有外城数据')
+      this.gameOver()
     }
   }
 
@@ -661,17 +673,46 @@ export default class TowerDefenseWorld {
   startWave() {
     if (this.isWaveActive) return
     
-    console.log(`开始第 ${this.wave} 波`)
+    console.log(`🎮 开始第 ${this.wave} 波`)
     
     this.isWaveActive = true
-    this.enemiesToSpawn = 5 + this.wave * 2
-    this.spawnInterval = Math.max(500, 1500 - this.wave * 100)
     this.isInitialLoad = false // 标记为非初始加载
+    
+    // 获取当前波次的怪物配置
+    this.waveComposition = getWaveComposition(this.wave)
+    
+    // 生成怪物队列
+    this.enemiesToSpawn = []
+    this.waveComposition.forEach(config => {
+      for (let i = 0; i < config.count; i++) {
+        this.enemiesToSpawn.push(config.type)
+      }
+    })
+    
+    // 打乱怪物出现顺序，增加随机性
+    this.shuffleArray(this.enemiesToSpawn)
+    
+    console.log(`📋 本波怪物配置:`, this.waveComposition)
+    console.log(`👾 总计 ${this.enemiesToSpawn.length} 个怪物`)
 
     // ===== 新增：保存游戏状态 =====
     this.gameState.setTDGameData({ isWaveActive: true })
     
-    this.experience.eventBus.emit('td:wave-started', { wave: this.wave })
+    this.experience.eventBus.emit('td:wave-started', { 
+      wave: this.wave,
+      composition: this.waveComposition,
+      totalEnemies: this.enemiesToSpawn.length,
+    })
+  }
+  
+  /**
+   * 打乱数组（Fisher-Yates 洗牌算法）
+   */
+  shuffleArray(array) {
+    for (let i = array.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [array[i], array[j]] = [array[j], array[i]]
+    }
   }
 
   spawnEnemy() {
@@ -680,7 +721,15 @@ export default class TowerDefenseWorld {
       return
     }
     
-    // 为每个怪物生成独立的随机路径
+    if (this.enemiesToSpawn.length === 0) {
+      console.warn('没有待生成的怪物')
+      return
+    }
+    
+    // 从队列中取出一个怪物类型
+    const enemyType = this.enemiesToSpawn.shift()
+    
+    // 为该怪物生成独立的随机路径
     const enemyPath = this.city.calculateRandomPathForEnemy()
     
     if (enemyPath.length === 0) {
@@ -688,34 +737,16 @@ export default class TowerDefenseWorld {
       return
     }
 
-    const startPos = enemyPath[0]
-    
-    // 生成路径摘要用于调试（只显示关键点）
-    const pathSummary = enemyPath.length > 5 ? 
-      `起点 -> ... (${enemyPath.length - 2} 个点) ... -> 终点` :
-      enemyPath.map(p => `(${p.x.toFixed(1)}, ${p.z.toFixed(1)})`).join(' -> ')
-    console.log(`🐛 生成敌人 #${this.enemies.length + 1}, 路径长度: ${enemyPath.length}, ${pathSummary}`)
-    
-    const geometry = new THREE.BoxGeometry(0.6, 0.6, 0.6)
-    const material = new THREE.MeshStandardMaterial({ color: '#e53e3e' })
-    const enemy = new THREE.Mesh(geometry, material)
-    
-    enemy.position.copy(startPos)
-    enemy.castShadow = true
-    
-    enemy.userData = {
-      pathIndex: 0,
-      speed: 2.0 + (this.wave * 0.1),
-      progress: 0,
-      health: 100 + (this.wave * 20),
-      maxHealth: 100 + (this.wave * 20),
-      reward: 10,
-      // 存储该怪物的独立路径
-      customPath: enemyPath
+    try {
+      // 使用新的 Enemy 类创建怪物
+      const enemy = new Enemy(enemyType, this.wave, enemyPath, this.root)
+      
+      this.enemies.push(enemy)
+      
+      console.log(`👾 生成 ${enemy.stats.name} (#${this.enemies.length}) | 血量: ${enemy.stats.health} | 速度: ${enemy.stats.speed.toFixed(2)} | 防御: ${(enemy.stats.defense * 100).toFixed(0)}% | 奖励: ${enemy.stats.reward}💰`)
+    } catch (error) {
+      console.error('生成怪物失败:', error)
     }
-
-    this.root.add(enemy)
-    this.enemies.push(enemy)
   }
 
   update() {
@@ -724,13 +755,12 @@ export default class TowerDefenseWorld {
     const dt = this.time.delta / 1000
 
     // 波次生成逻辑
-    if (this.isWaveActive && this.enemiesToSpawn > 0) {
+    if (this.isWaveActive && this.enemiesToSpawn.length > 0) {
       if (this.time.elapsed - this.lastSpawnTime > this.spawnInterval) {
         this.spawnEnemy()
-        this.enemiesToSpawn--
         this.lastSpawnTime = this.time.elapsed
       }
-    } else if (this.isWaveActive && this.enemiesToSpawn === 0 && this.enemies.length === 0) {
+    } else if (this.isWaveActive && this.enemiesToSpawn.length === 0 && this.enemies.length === 0) {
       // ===== 修复：防止刷新后立即触发波次完成 =====
       // 只有在非初始加载状态下，才允许触发波次完成
       if (!this.isInitialLoad) {
@@ -756,9 +786,23 @@ export default class TowerDefenseWorld {
       this.city.update()
     }
 
-    // 更新敌人
+    // 更新敌人（使用新的 Enemy 类）
     for (let i = this.enemies.length - 1; i >= 0; i--) {
-      this.updateEnemy(this.enemies[i], dt, i)
+      const enemy = this.enemies[i]
+      
+      if (!enemy || !enemy.isAlive) {
+        this.removeEnemy(i)
+        continue
+      }
+      
+      // 调用 Enemy 类的 update 方法
+      const reachedEnd = enemy.update(dt)
+      
+      if (reachedEnd) {
+        // 怪物到达终点，伤害基地
+        this.damageBase(1)
+        this.removeEnemy(i)
+      }
     }
 
     // 更新塔
@@ -824,25 +868,56 @@ export default class TowerDefenseWorld {
     this.experience.eventBus.emit('td:base-damaged', { health: this.baseHealth })
     
     if (this.baseHealth <= 0) {
+      this.baseHealth = 0 // 确保不为负数
       this.gameOver()
     }
   }
 
   gameOver() {
+    console.log('💀 游戏失败，清除所有外城数据')
     this.isWaveActive = false
 
-    // ===== 新增：保存游戏状态 =====
-    this.gameState.setTDGameData({ 
-      isWaveActive: false,
-      baseHealth: this.baseHealth 
-    })
+    // ===== 关键修复：完全重置外城数据 =====
+    this.gameState.resetTDGameData()
+    
+    // 清除所有 3D 对象
+    this.clearAllGameObjects()
 
     this.experience.eventBus.emit('td:game-over')
     this.experience.eventBus.emit('toast:add', {
-      message: '基地被摧毁！防守失败',
-      type: 'error'
+      message: '基地被摧毁！防守失败，游戏将重新开始',
+      type: 'error',
+      duration: 5000,
     })
-    this.resetGame()
+  }
+  
+  /**
+   * 清除所有游戏对象（敌人、子弹、防御塔）
+   */
+  clearAllGameObjects() {
+    console.log('清除所有游戏对象...')
+    
+    // 清除所有敌人
+    while (this.enemies.length > 0) {
+      this.removeEnemy(0)
+    }
+    
+    // 清除所有子弹
+    while (this.projectiles.length > 0) {
+      this.removeProjectile(0)
+    }
+    
+    // 清除所有防御塔
+    this.clearAllTowers()
+    
+    // 重置本地状态
+    this.wave = 1
+    this.baseHealth = 10
+    this.enemiesToSpawn = []
+    this.waveComposition = []
+    this.isInitialLoad = true
+    
+    console.log('所有游戏对象已清除')
   }
 
   // 升级防御塔
@@ -1025,15 +1100,9 @@ export default class TowerDefenseWorld {
   }
 
   resetGame() {
-    while(this.enemies.length > 0) {
-      this.removeEnemy(0)
-    }
-    while(this.projectiles.length > 0) {
-      this.removeProjectile(0)
-    }
-    this.wave = 1
-    this.baseHealth = 10
-    this.experience.eventBus.emit('td:base-damaged', { health: this.baseHealth })
+    // 已废弃，使用 clearAllGameObjects 代替
+    console.warn('resetGame 方法已废弃，请使用 clearAllGameObjects')
+    this.clearAllGameObjects()
   }
 
   updateTower(tower) {
@@ -1054,7 +1123,9 @@ export default class TowerDefenseWorld {
     let minDist = Infinity
 
     for (const enemy of this.enemies) {
-      const dist = towerWorldPos.distanceTo(enemy.position)
+      // 适配 Enemy 类：enemy 现在是 Enemy 实例，需要通过 enemy.mesh 获取位置
+      const enemyPos = enemy.getPosition()
+      const dist = towerWorldPos.distanceTo(enemyPos)
       if (dist <= tower.userData.range && dist < minDist) {
         minDist = dist
         target = enemy
@@ -1088,12 +1159,13 @@ export default class TowerDefenseWorld {
   updateProjectile(projectile, dt, index) {
     const target = projectile.userData.target
     
-    if (!this.enemies.includes(target)) {
+    if (!this.enemies.includes(target) || !target.isAlive) {
       this.removeProjectile(index)
       return
     }
 
-    const targetPos = target.position.clone().add(new THREE.Vector3(0, 0.3, 0))
+    // 适配 Enemy 类：使用 enemy.getPosition() 获取位置
+    const targetPos = target.getPosition().add(new THREE.Vector3(0, 0.3, 0))
     const dir = new THREE.Vector3().subVectors(targetPos, projectile.position).normalize()
     const dist = projectile.position.distanceTo(targetPos)
     const moveDist = projectile.userData.speed * dt
@@ -1107,19 +1179,14 @@ export default class TowerDefenseWorld {
   }
 
   hitEnemy(enemy, damage) {
-    enemy.userData.health -= damage
+    const isDead = enemy.takeDamage(damage)
     
-    const originalColor = enemy.material.color.getHex()
-    enemy.material.color.setHex(0xffffff)
-    setTimeout(() => {
-      if (enemy.material) enemy.material.color.setHex(originalColor)
-    }, 50)
-
-    if (enemy.userData.health <= 0) {
+    if (isDead) {
       const index = this.enemies.indexOf(enemy)
       if (index !== -1) {
+        // 给予奖励
+        this.gameState.updateCredits(enemy.stats.reward)
         this.removeEnemy(index)
-        this.gameState.updateCredits(enemy.userData.reward)
       }
     }
   }
@@ -1134,10 +1201,11 @@ export default class TowerDefenseWorld {
 
   removeEnemy(index) {
     const enemy = this.enemies[index]
-    this.root.remove(enemy)
-    enemy.geometry.dispose()
-    enemy.material.dispose()
-    this.enemies.splice(index, 1)
+    if (enemy) {
+      // 使用 Enemy 类的 destroy 方法
+      enemy.destroy(this.root)
+      this.enemies.splice(index, 1)
+    }
   }
 
   show() {

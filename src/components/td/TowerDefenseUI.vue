@@ -27,13 +27,20 @@ function handleBaseDamaged(data) {
 }
 
 function handleGameOver() {
+  console.log('UI: 游戏失败，重置所有数据')
+  // 重置为初始值
   isWaveActive.value = false
   wave.value = 1
   baseHealth.value = 10
+  enemiesRemaining.value = 0
+  
+  // 清除选中状态
+  gameState.setSelectedTower(null)
+  gameState.setSelectedPosition(null)
 }
 
 function handleWaveStarted(data) {
-  enemiesRemaining.value = 5 + data.wave * 2
+  enemiesRemaining.value = data.totalEnemies || (5 + data.wave * 2)
 }
 
 function handleWaveReset(data) {
