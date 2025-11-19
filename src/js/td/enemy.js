@@ -5,7 +5,8 @@
  */
 
 import * as THREE from 'three'
-import { calculateEnemyStats, createEnemyMesh } from './enemy-types.js'
+import { calculateEnemyStats } from './enemy-types.js'
+import EnemyModelFactory from './enemy-model-factory.js'
 
 export default class Enemy {
   /**
@@ -14,8 +15,9 @@ export default class Enemy {
    * @param {number} wave - 当前波次
    * @param {Array<THREE.Vector3>} path - 怪物的移动路径
    * @param {THREE.Scene} scene - 场景对象
+   * @param {EnemyModelFactory} modelFactory - 模型工厂实例
    */
-  constructor(enemyType, wave, path, scene) {
+  constructor(enemyType, wave, path, scene, modelFactory) {
     // 计算属性
     this.stats = calculateEnemyStats(enemyType, wave)
     if (!this.stats) {
@@ -40,8 +42,23 @@ export default class Enemy {
       burn: { active: false, dps: 0, duration: 0 },               // 燃烧效果
     }
     
-    // 创建 3D 模型
-    this.mesh = createEnemyMesh(this.stats)
+    // 创建 3D 模型（使用模型工厂）
+    this.modelFactory = modelFactory
+    if (modelFactory) {
+      this.mesh = modelFactory.createEnemyModel(enemyType, this.stats)
+    } else {
+      // 备用方案：简单立方体
+      const geometry = new THREE.BoxGeometry(this.stats.size, this.stats.size, this.stats.size)
+      const material = new THREE.MeshStandardMaterial({
+        color: this.stats.color,
+        metalness: 0.3,
+        roughness: 0.7,
+      })
+      this.mesh = new THREE.Mesh(geometry, material)
+      this.mesh.castShadow = true
+      this.mesh.receiveShadow = true
+    }
+    
     this.mesh.position.copy(path[0])
     
     // 存储引用到 userData 供其他系统使用
@@ -83,12 +100,32 @@ export default class Enemy {
    * 受伤闪烁效果
    */
   flashDamage() {
-    const originalColor = this.mesh.material.color.clone()
-    this.mesh.material.color.setHex(0xffffff)
-    
-    setTimeout(() => {
-      this.mesh.material.color.copy(originalColor)
-    }, 100)
+    // ===== 修复：支持 Group 和 Mesh =====
+    // 如果是 Group，遍历所有子网格
+    if (this.mesh.isGroup) {
+      this.mesh.traverse((child) => {
+        if (child.isMesh && child.material) {
+          const originalColor = child.material.color.clone()
+          child.material.color.setHex(0xffffff)
+          
+          setTimeout(() => {
+            if (child.material) {
+              child.material.color.copy(originalColor)
+            }
+          }, 100)
+        }
+      })
+    } else if (this.mesh.isMesh) {
+      // 如果是单个 Mesh
+      const originalColor = this.mesh.material.color.clone()
+      this.mesh.material.color.setHex(0xffffff)
+      
+      setTimeout(() => {
+        if (this.mesh.material) {
+          this.mesh.material.color.copy(originalColor)
+        }
+      }, 100)
+    }
   }
   
   /**
@@ -171,6 +208,12 @@ export default class Enemy {
     
     // 更新状态效果
     this.updateEffects(dt)
+    
+    // 更新动画
+    if (this.modelFactory) {
+      const currentSpeed = this.getCurrentSpeed()
+      this.modelFactory.updateAnimation(this.mesh, dt, currentSpeed)
+    }
     
     // 更新移动
     return this.updateMovement(dt)
@@ -269,8 +312,16 @@ export default class Enemy {
    */
   destroy(scene) {
     scene.remove(this.mesh)
-    if (this.mesh.geometry) this.mesh.geometry.dispose()
-    if (this.mesh.material) this.mesh.material.dispose()
+    
+    // 使用模型工厂清理资源
+    if (this.modelFactory) {
+      this.modelFactory.dispose(this.mesh)
+    } else {
+      // 备用清理
+      if (this.mesh.geometry) this.mesh.geometry.dispose()
+      if (this.mesh.material) this.mesh.material.dispose()
+    }
+    
     this.isAlive = false
   }
   

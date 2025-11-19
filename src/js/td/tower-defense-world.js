@@ -4,6 +4,7 @@ import { useGameState } from '@/stores/useGameState.js'
 import TDCity from './td-city.js'
 import TDTile from './td-tile.js'
 import Enemy from './enemy.js'
+import EnemyModelFactory from './enemy-model-factory.js'
 import { getWaveComposition } from './enemy-types.js'
 
 export default class TowerDefenseWorld {
@@ -25,6 +26,9 @@ export default class TowerDefenseWorld {
     this.towers = []
     this.projectiles = []
     this.pathPoints = []
+
+    // ===== 新增：初始化模型工厂 =====
+    this.enemyModelFactory = new EnemyModelFactory(this.resources)
 
     // 游戏状态（从 gameState 读取，支持持久化）
     this.wave = this.gameState.tdGameData.wave
@@ -738,8 +742,8 @@ export default class TowerDefenseWorld {
     }
 
     try {
-      // 使用新的 Enemy 类创建怪物
-      const enemy = new Enemy(enemyType, this.wave, enemyPath, this.root)
+      // ===== 修改：使用模型工厂创建怪物 =====
+      const enemy = new Enemy(enemyType, this.wave, enemyPath, this.root, this.enemyModelFactory)
       
       this.enemies.push(enemy)
       
