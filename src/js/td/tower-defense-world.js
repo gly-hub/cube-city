@@ -675,13 +675,26 @@ export default class TowerDefenseWorld {
   }
 
   spawnEnemy() {
-    if (this.pathPoints.length === 0) {
-      console.warn('路径点为空，无法生成敌人')
+    if (!this.city) {
+      console.warn('城市未初始化，无法生成敌人')
+      return
+    }
+    
+    // 为每个怪物生成独立的随机路径
+    const enemyPath = this.city.calculateRandomPathForEnemy()
+    
+    if (enemyPath.length === 0) {
+      console.warn('无法为敌人生成路径')
       return
     }
 
-    const startPos = this.pathPoints[0]
-    console.log('生成敌人，起始位置:', startPos.x.toFixed(2), startPos.y.toFixed(2), startPos.z.toFixed(2))
+    const startPos = enemyPath[0]
+    
+    // 生成路径摘要用于调试（只显示关键点）
+    const pathSummary = enemyPath.length > 5 ? 
+      `起点 -> ... (${enemyPath.length - 2} 个点) ... -> 终点` :
+      enemyPath.map(p => `(${p.x.toFixed(1)}, ${p.z.toFixed(1)})`).join(' -> ')
+    console.log(`🐛 生成敌人 #${this.enemies.length + 1}, 路径长度: ${enemyPath.length}, ${pathSummary}`)
     
     const geometry = new THREE.BoxGeometry(0.6, 0.6, 0.6)
     const material = new THREE.MeshStandardMaterial({ color: '#e53e3e' })
@@ -696,7 +709,9 @@ export default class TowerDefenseWorld {
       progress: 0,
       health: 100 + (this.wave * 20),
       maxHealth: 100 + (this.wave * 20),
-      reward: 10
+      reward: 10,
+      // 存储该怪物的独立路径
+      customPath: enemyPath
     }
 
     this.root.add(enemy)
@@ -765,16 +780,25 @@ export default class TowerDefenseWorld {
 
   updateEnemy(enemy, dt, index) {
     const data = enemy.userData
+    
+    // 使用怪物自己的路径，如果没有则使用全局路径（向后兼容）
+    const pathPoints = data.customPath || this.pathPoints
+    
+    if (!pathPoints || pathPoints.length === 0) {
+      console.warn('怪物路径为空')
+      return
+    }
+    
     const targetIndex = data.pathIndex + 1
     
-    if (targetIndex >= this.pathPoints.length) {
+    if (targetIndex >= pathPoints.length) {
       this.removeEnemy(index)
       this.damageBase(1)
       return
     }
 
-    const currentPoint = this.pathPoints[data.pathIndex]
-    const targetPoint = this.pathPoints[targetIndex]
+    const currentPoint = pathPoints[data.pathIndex]
+    const targetPoint = pathPoints[targetIndex]
     const dist = currentPoint.distanceTo(targetPoint)
     const moveDist = data.speed * dt
     data.progress += moveDist / dist
@@ -783,8 +807,8 @@ export default class TowerDefenseWorld {
       data.pathIndex++
       data.progress = 0
       enemy.position.copy(targetPoint)
-      if (data.pathIndex + 1 < this.pathPoints.length) {
-        enemy.lookAt(this.pathPoints[data.pathIndex + 1])
+      if (data.pathIndex + 1 < pathPoints.length) {
+        this.updateEnemy(enemy, 0, index)
       }
     } else {
       enemy.position.lerpVectors(currentPoint, targetPoint, data.progress)

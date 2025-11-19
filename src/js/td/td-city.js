@@ -171,9 +171,80 @@ export default class TDCity {
   }
 
   /**
-   * 使用 BFS 查找从起点到终点的路径
+   * 使用随机 DFS 查找从起点到终点的路径（支持多条路径）
+   * @returns {Array} 路径坐标数组
    */
-  findPath(startX, startY, endX, endY) {
+  findRandomPath(startX, startY, endX, endY) {
+    const path = []
+    const visited = new Set()
+    
+    // 随机打乱方向数组，每次调用都不同
+    const getRandomDirections = () => {
+      const dirs = [
+        [0, 1],   // 右
+        [0, -1],  // 左
+        [1, 0],   // 下
+        [-1, 0],  // 上
+      ]
+      // Fisher-Yates 洗牌算法，保证真正的随机
+      for (let i = dirs.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [dirs[i], dirs[j]] = [dirs[j], dirs[i]]
+      }
+      return dirs
+    }
+    
+    // 递归 DFS，每次在分叉时随机选择
+    const dfs = (x, y, currentPath) => {
+      // 到达终点
+      if (x === endX && y === endY) {
+        path.push(...currentPath, [x, y])
+        return true
+      }
+      
+      const key = `${x},${y}`
+      if (visited.has(key)) return false
+      visited.add(key)
+      currentPath.push([x, y])
+      
+      // 随机打乱探索方向
+      const directions = getRandomDirections()
+      
+      for (const [dx, dy] of directions) {
+        const nx = x + dx
+        const ny = y + dy
+        
+        // 检查边界
+        if (nx < 0 || nx >= this.size || ny < 0 || ny >= this.size) continue
+        
+        const cellType = this.mapData[nx]?.[ny]
+        // 可通行：路径(1)、起点(2)、终点(3)
+        if (cellType === 1 || cellType === 2 || cellType === 3) {
+          if (dfs(nx, ny, [...currentPath])) {
+            return true
+          }
+        }
+      }
+      
+      // 回溯
+      visited.delete(key)
+      return false
+    }
+    
+    // 开始搜索
+    if (dfs(startX, startY, [])) {
+      return path
+    }
+    
+    console.warn('未找到从起点到终点的路径')
+    return []
+  }
+
+  /**
+   * 使用 BFS 查找从起点到终点的路径（用于初始化和调试）
+   * @param {boolean} randomize - 是否在分叉时随机选择路径
+   */
+  findPath(startX, startY, endX, endY, randomize = false) {
     const queue = [[startX, startY]]
     const visited = new Set()
     const parent = new Map()
@@ -209,8 +280,13 @@ export default class TDCity {
         return path
       }
 
+      // 如果启用随机化，每次都打乱邻居探索顺序
+      const exploreDirections = randomize ? 
+        [...directions].sort(() => Math.random() - 0.5) : 
+        directions
+
       // 检查四个方向
-      for (const [dx, dy] of directions) {
+      for (const [dx, dy] of exploreDirections) {
         const nx = x + dx
         const ny = y + dy
 
@@ -232,6 +308,72 @@ export default class TDCity {
 
     console.warn('未找到从起点到终点的路径')
     return []
+  }
+
+  /**
+   * 为单个怪物计算随机路径（在分叉时随机选择）
+   * @returns {Array<THREE.Vector3>} 世界坐标的路径点数组
+   */
+  calculateRandomPathForEnemy() {
+    // 找到起点和终点
+    let startX = -1, startY = -1
+    let endX = -1, endY = -1
+    
+    for (let x = 0; x < this.size; x++) {
+      for (let y = 0; y < this.size; y++) {
+        if (this.mapData[x]?.[y] === 2) {
+          startX = x
+          startY = y
+        }
+        if (this.mapData[x]?.[y] === 3) {
+          endX = x
+          endY = y
+        }
+      }
+    }
+
+    if (startX === -1 || endX === -1) {
+      console.warn('未找到起点或终点')
+      return []
+    }
+
+    // 使用随机 DFS 查找路径（每次调用都会找到不同的路径）
+    const path = this.findRandomPath(startX, startY, endX, endY)
+    
+    if (path.length === 0) {
+      console.warn('随机路径查找失败，使用 BFS 备用方案')
+      // 如果 DFS 失败，使用 BFS 作为备用
+      const bfsPath = this.findPath(startX, startY, endX, endY, false)
+      if (bfsPath.length > 0) {
+        return this.convertPathToWorldCoords(bfsPath)
+      }
+      return []
+    }
+    
+    // 转换为世界坐标
+    return this.convertPathToWorldCoords(path)
+  }
+
+  /**
+   * 将路径坐标转换为世界坐标
+   */
+  convertPathToWorldCoords(path) {
+    const offset = -(this.size - 1) / 2
+    
+    return path.map(([x, y]) => {
+      const tile = this.getTile(x, y)
+      if (tile) {
+        const worldPos = new THREE.Vector3()
+        tile.getWorldPosition(worldPos)
+        return new THREE.Vector3(worldPos.x, 0.5, worldPos.z)
+      } else {
+        return new THREE.Vector3(
+          y + offset,
+          0.5,
+          x + offset
+        )
+      }
+    })
   }
 
   update() {
