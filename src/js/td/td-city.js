@@ -18,7 +18,8 @@ export default class TDCity {
     // 外城地皮专用 Group
     // 注意：不直接添加到 scene，而是由 TowerDefenseWorld 管理
     this.root = new THREE.Group()
-    this.root.visible = false
+    // 外城地图默认可见，由 TowerDefenseWorld 的 root 控制总可见性
+    this.root.visible = true
 
     // 存储所有 tile
     this.meshes = []

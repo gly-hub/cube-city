@@ -24,13 +24,16 @@ export default class TowerDefenseWorld {
     this.projectiles = []
     this.pathPoints = []
 
-    // 游戏状态
-    this.wave = 1
-    this.baseHealth = 10
-    this.isWaveActive = false
+    // 游戏状态（从 gameState 读取，支持持久化）
+    this.wave = this.gameState.tdGameData.wave
+    this.baseHealth = this.gameState.tdGameData.baseHealth
+    this.isWaveActive = this.gameState.tdGameData.isWaveActive
     this.enemiesToSpawn = 0
     this.spawnInterval = 1500
     this.lastSpawnTime = 0
+    
+    // 用于检测是否是刷新后的初始化
+    this.isInitialLoad = true
 
     // 拖拽状态
     this.draggingTowerType = null
@@ -90,6 +93,17 @@ export default class TowerDefenseWorld {
 
   createCity() {
     console.log('创建外城城市')
+    
+    // 如果 city 已存在，先清理旧数据
+    if (this.city) {
+      console.log('清理旧的外城数据')
+      this.clearAllTowers()
+      if (this.city.root) {
+        this.root.remove(this.city.root)
+      }
+      this.city = null
+    }
+    
     this.city = new TDCity()
     // 将 city 的 root 添加到 tdWorld 的 root
     this.root.add(this.city.root)
@@ -97,6 +111,124 @@ export default class TowerDefenseWorld {
     this.pathPoints = this.city.pathPoints
     console.log('外城创建完成，路径点数量:', this.pathPoints.length)
     console.log('外城 root 层级:', this.root.children.length, 'city root 层级:', this.city.root.children.length)
+
+    // 恢复已保存的防御塔
+    this.restoreTowers()
+  }
+
+  /**
+   * 清除所有防御塔（3D 对象和数据）
+   */
+  clearAllTowers() {
+    console.log('清除所有防御塔，当前数量:', this.towers.length)
+    
+    // 移除所有防御塔的 3D 对象
+    while (this.towers.length > 0) {
+      const tower = this.towers[0]
+      const tile = tower.userData?.tile
+      
+      if (tile) {
+        tile.removeTower()
+      } else {
+        // 如果没有 tile 引用，直接从场景移除
+        if (tower.parent) {
+          tower.parent.remove(tower)
+        }
+        if (tower.geometry) tower.geometry.dispose()
+        if (tower.material) tower.material.dispose()
+      }
+      
+      this.towers.shift()
+    }
+    
+    console.log('所有防御塔已清除')
+  }
+
+  /**
+   * 从持久化数据恢复防御塔
+   */
+  restoreTowers() {
+    const savedTowers = this.gameState.tdGameData.towers || []
+    console.log(`正在恢复 ${savedTowers.length} 个防御塔...`)
+
+    // 如果没有保存的防御塔，直接返回
+    if (savedTowers.length === 0) {
+      console.log('没有需要恢复的防御塔')
+      return
+    }
+
+    // 确保 city 和 city.getTile 方法存在
+    if (!this.city || typeof this.city.getTile !== 'function') {
+      console.error('城市未初始化或 getTile 方法不存在，无法恢复防御塔')
+      return
+    }
+
+    savedTowers.forEach((towerData, index) => {
+      try {
+        const tile = this.city.getTile(towerData.tileX, towerData.tileY)
+        if (!tile) {
+          console.warn(`防御塔 ${index}: tile (${towerData.tileX}, ${towerData.tileY}) 不存在`)
+          return
+        }
+
+        if (tile.type !== 'base') {
+          console.warn(`防御塔 ${index}: tile (${towerData.tileX}, ${towerData.tileY}) 不是基础类型，是 ${tile.type}`)
+          return
+        }
+
+        if (tile.hasTower) {
+          console.warn(`防御塔 ${index}: tile (${towerData.tileX}, ${towerData.tileY}) 已经有防御塔了`)
+          return
+        }
+
+        // 创建防御塔 mesh
+        const tower = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.3, 0.5, 1, 8),
+          new THREE.MeshStandardMaterial({ 
+            color: towerData.type === 'basic' ? 0x4a9eff : 
+                   towerData.type === 'rapid' ? 0xffb800 : 0xff4757 
+          })
+        )
+        
+        // 添加到 tile
+        tile.setTower(tower)
+        
+        // 保存防御塔的完整数据
+        tower.userData = {
+          id: `tower_${towerData.tileX}_${towerData.tileY}`,
+          name: this.getTowerName(towerData.type),
+          type: towerData.type,
+          damage: towerData.damage,
+          range: towerData.range,
+          cooldown: towerData.cooldown,
+          level: towerData.level,
+          cost: towerData.cost,
+          lastFireTime: 0,
+          tile: tile,
+        }
+        
+        // 添加到 towers 数组（只保存 mesh，保持一致性）
+        this.towers.push(tower)
+        
+        console.log(`恢复防御塔: ${tower.userData.name} 等级 ${tower.userData.level} at (${towerData.tileX}, ${towerData.tileY})`)
+      } catch (error) {
+        console.error(`恢复防御塔 ${index} 时出错:`, error)
+      }
+    })
+
+    console.log(`防御塔恢复完成，当前共有 ${this.towers.length} 个防御塔`)
+    
+    // ===== 修复：检查波次状态 =====
+    // 如果 isWaveActive 为 true，但没有敌人和待生成敌人，说明是从战斗中刷新的
+    // 这种情况下，应该重置 isWaveActive，要求用户重新开始当前波次
+    if (this.isWaveActive && this.enemiesToSpawn === 0 && this.enemies.length === 0) {
+      console.warn('检测到战斗状态异常（战斗中刷新），重置 isWaveActive，需要重新开始当前波次')
+      this.isWaveActive = false
+      this.gameState.setTDGameData({ isWaveActive: false })
+      
+      // 通知 UI 层更新状态
+      this.experience.eventBus.emit('td:wave-reset', { wave: this.wave })
+    }
   }
 
   handleClick(event) {
@@ -313,6 +445,10 @@ export default class TowerDefenseWorld {
         if (index > -1) {
           this.towers.splice(index, 1)
         }
+        // ===== 新增：从持久化数据中移除 =====
+        this.gameState.removeTowerFromData(selectedTower.tileX, selectedTower.tileY)
+        console.log('已从持久化数据中移除防御塔，剩余:', this.gameState.tdGameData.towers.length)
+        
         // 清除选择
         this.gameState.setSelectedTower(null)
         this.experience.eventBus.emit('toast:add', {
@@ -501,6 +637,19 @@ export default class TowerDefenseWorld {
       
       // 自动选中刚放置的防御塔
       this.gameState.setSelectedTower(towerData)
+
+      // ===== 新增：保存到持久化数据 =====
+      this.gameState.addTowerToData({
+        type: towerType.id,
+        level: 1,
+        damage: towerType.damage,
+        range: towerType.range,
+        cooldown: 1000,
+        cost: towerType.cost,
+        tileX: tile._tileX,
+        tileY: tile._tileY,
+      })
+      console.log('持久化数据已更新，当前防御塔数量:', this.gameState.tdGameData.towers.length)
       
       this.experience.eventBus.emit('toast:add', {
         message: `已放置 ${this.getTowerName(towerType.id)}`,
@@ -512,9 +661,15 @@ export default class TowerDefenseWorld {
   startWave() {
     if (this.isWaveActive) return
     
+    console.log(`开始第 ${this.wave} 波`)
+    
     this.isWaveActive = true
     this.enemiesToSpawn = 5 + this.wave * 2
     this.spawnInterval = Math.max(500, 1500 - this.wave * 100)
+    this.isInitialLoad = false // 标记为非初始加载
+
+    // ===== 新增：保存游戏状态 =====
+    this.gameState.setTDGameData({ isWaveActive: true })
     
     this.experience.eventBus.emit('td:wave-started', { wave: this.wave })
   }
@@ -561,13 +716,24 @@ export default class TowerDefenseWorld {
         this.lastSpawnTime = this.time.elapsed
       }
     } else if (this.isWaveActive && this.enemiesToSpawn === 0 && this.enemies.length === 0) {
-      this.isWaveActive = false
-      this.wave++
-      this.experience.eventBus.emit('td:wave-completed', { nextWave: this.wave })
-      this.experience.eventBus.emit('toast:add', {
-        message: `第 ${this.wave - 1} 波防守成功！`,
-        type: 'success'
-      })
+      // ===== 修复：防止刷新后立即触发波次完成 =====
+      // 只有在非初始加载状态下，才允许触发波次完成
+      if (!this.isInitialLoad) {
+        this.isWaveActive = false
+        this.wave++
+
+        // ===== 新增：保存游戏状态 =====
+        this.gameState.setTDGameData({ 
+          wave: this.wave,
+          isWaveActive: false
+        })
+
+        this.experience.eventBus.emit('td:wave-completed', { nextWave: this.wave })
+        this.experience.eventBus.emit('toast:add', {
+          message: `第 ${this.wave - 1} 波防守成功！`,
+          type: 'success'
+        })
+      }
     }
 
     // 更新城市
@@ -582,7 +748,13 @@ export default class TowerDefenseWorld {
 
     // 更新塔
     this.towers.forEach(tower => {
-      this.updateTower(tower)
+      // 确保 tower 存在且有 userData
+      if (tower && tower.userData) {
+        this.updateTower(tower)
+      } else if (tower && tower.mesh && tower.mesh.userData) {
+        // 如果 tower 是对象格式（从 restoreTowers），则使用 tower.mesh
+        this.updateTower(tower.mesh)
+      }
     })
 
     // 更新子弹
@@ -621,6 +793,10 @@ export default class TowerDefenseWorld {
 
   damageBase(amount) {
     this.baseHealth -= amount
+
+    // ===== 新增：保存游戏状态 =====
+    this.gameState.setTDGameData({ baseHealth: this.baseHealth })
+
     this.experience.eventBus.emit('td:base-damaged', { health: this.baseHealth })
     
     if (this.baseHealth <= 0) {
@@ -630,6 +806,13 @@ export default class TowerDefenseWorld {
 
   gameOver() {
     this.isWaveActive = false
+
+    // ===== 新增：保存游戏状态 =====
+    this.gameState.setTDGameData({ 
+      isWaveActive: false,
+      baseHealth: this.baseHealth 
+    })
+
     this.experience.eventBus.emit('td:game-over')
     this.experience.eventBus.emit('toast:add', {
       message: '基地被摧毁！防守失败',
@@ -699,6 +882,16 @@ export default class TowerDefenseWorld {
         tower.userData.damage = Math.floor(tower.userData.damage * 1.2) // 伤害增加 20%
         tower.userData.range = tower.userData.range + 0.5 // 范围增加 0.5
         tower.userData.cooldown = Math.max(500, tower.userData.cooldown - 100) // 冷却减少 100ms
+
+        // ===== 新增：更新持久化数据 =====
+        this.gameState.updateTowerInData(selectedTower.tileX, selectedTower.tileY, {
+          level: nextLevel,
+          damage: tower.userData.damage,
+          range: tower.userData.range,
+          cooldown: tower.userData.cooldown,
+          cost: this.getTowerCost(tower.userData.type, nextLevel),
+        })
+        console.log('持久化数据已更新')
 
         // 更新选中状态（只保存数据，不保存对象引用）
         setTimeout(() => {
@@ -820,6 +1013,12 @@ export default class TowerDefenseWorld {
   }
 
   updateTower(tower) {
+    // 安全检查：确保 tower 和 userData 存在
+    if (!tower || !tower.userData) {
+      console.warn('updateTower: tower 或 userData 不存在', tower)
+      return
+    }
+
     const now = this.time.elapsed
     if (now - tower.userData.lastAttackTime < tower.userData.cooldown) return
 
@@ -924,6 +1123,25 @@ export default class TowerDefenseWorld {
     // 先显示 root
     this.root.visible = true
     
+    // 检查是否需要重新创建城市（例如，用户点击了"重新开始新游戏"）
+    const savedTowers = this.gameState.tdGameData.towers || []
+    if (savedTowers.length === 0 && this.towers.length > 0) {
+      console.log('检测到游戏数据已重置，重新创建外城')
+      this.createCity()
+      // 重置游戏状态
+      this.wave = this.gameState.tdGameData.wave
+      this.baseHealth = this.gameState.tdGameData.baseHealth
+      this.isWaveActive = this.gameState.tdGameData.isWaveActive
+      // 清除敌人和子弹
+      while (this.enemies.length > 0) {
+        this.removeEnemy(0)
+      }
+      while (this.projectiles.length > 0) {
+        this.removeProjectile(0)
+      }
+      return // 重新创建后直接返回，后续逻辑会在递归调用中执行
+    }
+    
     if (this.city) {
       // 确保 city 的 root 也在层级中
       if (!this.root.children.includes(this.city.root)) {
@@ -948,12 +1166,29 @@ export default class TowerDefenseWorld {
     }
     
     // 确保环境光显示（外城和内城共用同一个环境系统）
-    const world = this.experience.world
-    if (world && world.environment) {
-      if (world.environment.sunLight) world.environment.sunLight.visible = true
-      if (world.environment.ambientLight) world.environment.ambientLight.visible = true
-      if (world.environment.hemisphereLight) world.environment.hemisphereLight.visible = true
+    // 需要等待 environment 初始化完成
+    const checkAndEnableLights = () => {
+      const world = this.experience.world
+      if (world && world.environment) {
+        console.log('启用环境光 for 外城')
+        if (world.environment.sunLight) {
+          world.environment.sunLight.visible = true
+          console.log('sunLight enabled, intensity:', world.environment.sunLight.intensity)
+        }
+        if (world.environment.ambientLight) {
+          world.environment.ambientLight.visible = true
+          console.log('ambientLight enabled, intensity:', world.environment.ambientLight.intensity)
+        }
+        if (world.environment.hemisphereLight) {
+          world.environment.hemisphereLight.visible = true
+          console.log('hemisphereLight enabled, intensity:', world.environment.hemisphereLight.intensity)
+        }
+      } else {
+        console.warn('environment 尚未初始化，等待 100ms 后重试')
+        setTimeout(checkAndEnableLights, 100)
+      }
     }
+    checkAndEnableLights()
     
     // 添加事件监听器（只在显示时添加，避免干扰内城）
     if (!this.eventListenersAttached) {

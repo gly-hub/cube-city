@@ -73,6 +73,14 @@ export const useGameState = defineStore('gameState', {
     // 塔防系统状态
     selectedTowerType: null, // 当前选中的防御塔类型
     selectedTower: null, // 当前选中的防御塔实例
+
+    // 外城塔防游戏数据（持久化）
+    tdGameData: {
+      wave: 1, // 当前波次
+      baseHealth: 10, // 基地生命值
+      towers: [], // 防御塔数据 [{ type, level, damage, range, cooldown, cost, tileX, tileY }]
+      isWaveActive: false, // 是否正在战斗
+    },
   }),
   getters: {
     /**
@@ -479,6 +487,15 @@ export const useGameState = defineStore('gameState', {
       this.showAchievementPanel = false
       this.meritPoints = 0
       this.currentTitle = 'village_staff'
+      this.selectedTowerType = null
+      this.selectedTower = null
+      // 重置外城塔防数据
+      this.tdGameData = {
+        wave: 1,
+        baseHealth: 10,
+        towers: [],
+        isWaveActive: false,
+      }
     },
 
     // 音乐系统相关方法
@@ -675,6 +692,60 @@ export const useGameState = defineStore('gameState', {
       // 重置塔防系统状态
       this.selectedTowerType = null
       this.selectedTower = null
+    },
+
+    // ===== 外城塔防数据管理 =====
+    /**
+     * 设置外城游戏数据
+     */
+    setTDGameData(data) {
+      this.tdGameData = {
+        ...this.tdGameData,
+        ...data,
+      }
+    },
+
+    /**
+     * 重置外城游戏数据
+     */
+    resetTDGameData() {
+      this.tdGameData = {
+        wave: 1,
+        baseHealth: 10,
+        towers: [],
+        isWaveActive: false,
+      }
+    },
+
+    /**
+     * 添加防御塔到持久化数据
+     */
+    addTowerToData(towerData) {
+      this.tdGameData.towers.push(towerData)
+    },
+
+    /**
+     * 从持久化数据中移除防御塔
+     */
+    removeTowerFromData(tileX, tileY) {
+      this.tdGameData.towers = this.tdGameData.towers.filter(
+        t => !(t.tileX === tileX && t.tileY === tileY)
+      )
+    },
+
+    /**
+     * 更新防御塔数据
+     */
+    updateTowerInData(tileX, tileY, updates) {
+      const index = this.tdGameData.towers.findIndex(
+        t => t.tileX === tileX && t.tileY === tileY
+      )
+      if (index !== -1) {
+        this.tdGameData.towers[index] = {
+          ...this.tdGameData.towers[index],
+          ...updates,
+        }
+      }
     },
   },
   persist: true, // 启用持久化

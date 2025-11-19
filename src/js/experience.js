@@ -61,6 +61,7 @@ export default class Experience {
     // 初始化时根据当前场景设置显示状态
     // 延迟执行，确保 world 和 tdWorld 都已初始化
     setTimeout(() => {
+      console.log('初始化场景:', this.gameState.currentScene)
       this.switchScene(this.gameState.currentScene)
     }, 100)
 
@@ -113,15 +114,15 @@ export default class Experience {
   }
 
   switchScene(sceneName) {
+    console.log('Experience.switchScene:', sceneName)
     if (sceneName === 'CITY') {
       this.tdWorld.hide()
       this.world.show()
-      // 可以在这里重置相机位置到内城视角
     } else if (sceneName === 'TD') {
       this.world.hide()
       this.tdWorld.show()
-      // 可以在这里重置相机位置到外城视角
     }
+    // 相机切换由 Camera 类监听 scene:change 事件自动处理
   }
 
   update() {

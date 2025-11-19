@@ -20,6 +20,8 @@ export default class City {
     // 地皮专用 Group
     this.root = new THREE.Group()
     this.scene.add(this.root)
+    // 初始化时根据当前场景决定是否显示
+    this.root.visible = (this.gameState.currentScene === 'CITY')
     // 地皮尺寸（从 gameState 读取，支持动态变化）
     this.size = this.gameState.citySize || SIZE
     // 存储所有 tile

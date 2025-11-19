@@ -6,9 +6,10 @@ import TowerSidebar from './TowerSidebar.vue'
 import TowerInfoPanel from './TowerInfoPanel.vue'
 
 const gameState = useGameState()
-const wave = ref(1)
-const baseHealth = ref(10)
-const isWaveActive = ref(false)
+// 从持久化数据初始化（而不是硬编码默认值）
+const wave = ref(gameState.tdGameData.wave || 1)
+const baseHealth = ref(gameState.tdGameData.baseHealth || 10)
+const isWaveActive = ref(gameState.tdGameData.isWaveActive || false)
 const enemiesRemaining = ref(0)
 
 function startWave() {
@@ -35,6 +36,13 @@ function handleWaveStarted(data) {
   enemiesRemaining.value = 5 + data.wave * 2
 }
 
+function handleWaveReset(data) {
+  // 战斗中刷新导致的波次重置
+  console.log('波次重置，当前波次:', data.wave)
+  isWaveActive.value = false
+  wave.value = data.wave
+}
+
 function handleEnemySpawned() {
   // 可以在这里更新剩余敌人数量
 }
@@ -44,6 +52,7 @@ onMounted(() => {
   eventBus.on('td:base-damaged', handleBaseDamaged)
   eventBus.on('td:game-over', handleGameOver)
   eventBus.on('td:wave-started', handleWaveStarted)
+  eventBus.on('td:wave-reset', handleWaveReset)
 })
 
 onUnmounted(() => {
@@ -51,6 +60,7 @@ onUnmounted(() => {
   eventBus.off('td:base-damaged', handleBaseDamaged)
   eventBus.off('td:game-over', handleGameOver)
   eventBus.off('td:wave-started', handleWaveStarted)
+  eventBus.off('td:wave-reset', handleWaveReset)
 })
 </script>
 

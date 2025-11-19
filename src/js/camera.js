@@ -3,6 +3,7 @@ import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import { TrackballControls } from 'three/examples/jsm/controls/TrackballControls.js'
 import Experience from './experience.js'
+import { useGameState } from '@/stores/useGameState.js'
 
 export default class Camera {
   constructor(orthographic = false) {
@@ -26,14 +27,14 @@ export default class Camera {
     this.target = new THREE.Vector3(8, 0, 8)
 
     // 塔防模式的相机设置（使用和内城一致的2.5D等距视角）
-    // 外城地图是 10x10，中心在 (0, 0, 0)
+    // 外城地图是 16x16，中心在 (0, 0, 0)
     // 内城视角：从 (18, 10, 18) 看向 (8, 0, 8)，相对偏移 (10, 10, 10)
-    // 外城使用类似的比例：从 (10, 6, 10) 看向 (0, 0, 0)，保持相同的视角角度
-    this.tdPosition = new THREE.Vector3(10, 6, 10) // 等距视角，类似内城
+    // 外城使用类似的比例：从 (12, 8, 12) 看向 (0, 0, 0)，保持相同的视角角度
+    this.tdPosition = new THREE.Vector3(12, 8, 12) // 等距视角，类似内城，适配 16x16 地图
     this.tdTarget = new THREE.Vector3(0, 0, 0) // 地图中心
 
     this.isRotating = false // 是否正在切换动画
-    this.initialAngle = null // 记录“初始角”，仅作为标记，不强制使用
+    this.initialAngle = null // 记录"初始角"，仅作为标记，不强制使用
 
     this.setInstance()
     this.setControls()
@@ -51,6 +52,8 @@ export default class Camera {
   /* -------------------------------------------------- */
 
   setInstance() {
+    const gameState = useGameState()
+    
     if (this.orthographic) {
       const aspect = this.sizes.aspect
       this.frustumSize = 10
@@ -72,23 +75,38 @@ export default class Camera {
       )
     }
 
-    // 初始位置使用固定点位 0
-    this.instance.position.copy(this.fixedPoints[this.currentIndex])
-    this.instance.lookAt(this.target)
+    // 根据当前场景设置初始相机位置
+    if (gameState.currentScene === 'TD') {
+      // 外城：使用 TD 视角
+      this.instance.position.copy(this.tdPosition)
+      this.instance.lookAt(this.tdTarget)
+      console.log('相机初始化：外城视角', this.tdPosition)
+    } else {
+      // 内城：使用固定点位 0
+      this.instance.position.copy(this.fixedPoints[this.currentIndex])
+      this.instance.lookAt(this.target)
+      console.log('相机初始化：内城视角', this.fixedPoints[this.currentIndex])
+    }
+    
     this.scene.add(this.instance)
   }
 
   setControls() {
+    const gameState = useGameState()
+    
+    // 根据当前场景确定初始 target
+    const initialTarget = gameState.currentScene === 'TD' ? this.tdTarget : this.target
+    
     // 鼠标自由旋转（OrbitControls）
     this.orbitControls = new OrbitControls(this.instance, this.canvas)
     this.orbitControls.enableDamping = true
     this.orbitControls.enableZoom = false
     this.orbitControls.enableRotate = true // 允许鼠标旋转
     this.orbitControls.dampingFactor = 0.3
-    this.orbitControls.target.copy(this.target)
+    this.orbitControls.target.copy(initialTarget)
 
     // 锁定垂直极角：当前相机 -> 目标点的方向
-    const offset = new THREE.Vector3().subVectors(this.instance.position, this.target)
+    const offset = new THREE.Vector3().subVectors(this.instance.position, initialTarget)
     const polarAngle = offset.angleTo(new THREE.Vector3(0, 1, 0))
     this.orbitControls.minPolarAngle = polarAngle
     this.orbitControls.maxPolarAngle = polarAngle
@@ -101,8 +119,10 @@ export default class Camera {
     this.trackballControls.zoomSpeed = 1
     this.trackballControls.minZoom = 0.5
     this.trackballControls.maxZoom = 2
-    this.trackballControls.target.copy(this.target)
+    this.trackballControls.target.copy(initialTarget)
     this.trackballControls.handleResize()
+    
+    console.log('Controls 初始化完成, target:', initialTarget, 'scene:', gameState.currentScene)
   }
 
   setDebug() {

@@ -3,12 +3,14 @@ import Experience from '../experience.js'
 import Interactor from '../tools/interactor.js'
 import Environment from './environment.js'
 import SceneMetadata from './scene-metadata.js'
+import { useGameState } from '@/stores/useGameState.js'
 
 export default class World {
   constructor() {
     this.experience = new Experience()
     this.scene = this.experience.scene
     this.resources = this.experience.resources
+    this.gameState = useGameState()
 
     // 新增：场景元数据管理器
     this.experience.sceneMetadata = new SceneMetadata()
@@ -18,6 +20,11 @@ export default class World {
       this.environment = new Environment()
       // 实例化城市地皮
       this.city = new City()
+
+      // 确保初始化时根据当前场景设置可见性
+      if (this.gameState.currentScene !== 'CITY') {
+        this.hide()
+      }
 
       // 交互系统
       this.interactor = new Interactor(this.city.root)
