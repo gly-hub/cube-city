@@ -15,6 +15,8 @@ export const useGameState = defineStore('gameState', {
         direction: 0,
       }))),
     currentMode: 'build',
+    // 新增：当前场景模式 'CITY' | 'TD'
+    currentScene: 'CITY',
     selectedBuilding: null,
     selectedPosition: null,
     toastQueue: [],
@@ -67,6 +69,10 @@ export const useGameState = defineStore('gameState', {
     buildingTechs: {}, // 建筑科技研发状态 { 'x,y': ['tech_id1', 'tech_id2'] }
     showTechTreePanel: false, // 是否显示科技树面板
     selectedBuildingForTech: null, // 当前选中用于科技研发的建筑位置 { x, y }
+
+    // 塔防系统状态
+    selectedTowerType: null, // 当前选中的防御塔类型
+    selectedTower: null, // 当前选中的防御塔实例
   }),
   getters: {
     /**
@@ -322,6 +328,12 @@ export const useGameState = defineStore('gameState', {
         })
       }
     },
+    // 新增：设置场景模式
+    setScene(scene) {
+      this.currentScene = scene
+      // 触发场景切换事件，通知 Experience
+      eventBus.emit('scene:change', scene)
+    },
     setSelectedBuilding(payload) {
       this.selectedBuilding = payload
     },
@@ -437,6 +449,7 @@ export const useGameState = defineStore('gameState', {
           direction: 0,
         })))
       this.currentMode = 'build'
+      this.currentScene = 'CITY'
       this.selectedBuilding = null
       this.selectedPosition = null
       this.toastQueue = []
@@ -600,6 +613,14 @@ export const useGameState = defineStore('gameState', {
       this.selectedBuildingForTech = position
     },
 
+    // 塔防系统相关方法
+    setSelectedTowerType(towerType) {
+      this.selectedTowerType = towerType
+    },
+    setSelectedTower(tower) {
+      this.selectedTower = tower
+    },
+
     // 扩展地图大小（保留原有数据）
     expandMap(newSize) {
       const oldSize = this.citySize
@@ -650,6 +671,10 @@ export const useGameState = defineStore('gameState', {
       this.buildingTechs = {}
       this.showTechTreePanel = false
       this.selectedBuildingForTech = null
+      
+      // 重置塔防系统状态
+      this.selectedTowerType = null
+      this.selectedTower = null
     },
   },
   persist: true, // 启用持久化

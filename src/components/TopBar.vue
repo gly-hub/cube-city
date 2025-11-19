@@ -1,6 +1,6 @@
 <script setup>
 import { storeToRefs } from 'pinia'
-import { computed, nextTick, ref, Teleport, watch } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
 import { useMobile } from '@/composables/useMobile.js'
 import { getNextTitle } from '@/constants/title-config.js'
 import { eventBus } from '@/js/utils/event-bus.js'
@@ -11,7 +11,7 @@ import AudioManager from './AudioManager.vue'
 import GuideModal from './GuideModal.vue'
 
 const gameState = useGameState()
-const { credits, totalJobs, maxPopulation, territory, citySize, cityLevel, cityName, language, showMapOverview, gameDay, power, maxPower, musicEnabled, musicVolume, isPlayingMusic, showQuestPanel, meritPoints, buildingCount, dailyIncome, pollution, stability, systemStatus, gameSpeed } = storeToRefs(gameState)
+const { credits, totalJobs, maxPopulation, territory, citySize, cityLevel, cityName, language, gameDay, power, maxPower, musicEnabled, musicVolume, isPlayingMusic, showQuestPanel, meritPoints, buildingCount, dailyIncome, pollution, stability, systemStatus, gameSpeed } = storeToRefs(gameState)
 
 // 移动端检测
 const { isMobileDevice } = useMobile()
@@ -38,7 +38,7 @@ const showTooltip = ref(false)
 const titleElementRef = ref(null)
 
 // 计算提示框位置
-function updateTooltipPosition(event) {
+function updateTooltipPosition(_event) {
   if (!titleElementRef.value)
     return
   const rect = titleElementRef.value.getBoundingClientRect()
@@ -293,8 +293,8 @@ const showMobileMenu = ref(false)
     <template v-else>
       <!-- 第一行：主要资源和城市信息 -->
       <div class="flex justify-between items-center mb-2">
-        <!-- 左侧资源信息 -->
-        <div class="flex items-center space-x-4">
+        <!-- 左侧资源信息 (仅内城显示) -->
+        <div v-if="gameState.currentScene === 'CITY'" class="flex items-center space-x-4">
           <!-- 金币 -->
           <div class="resource-display rounded-lg px-3 py-1.5 flex items-center space-x-2 min-w-[8vw]">
             <div class="status-indicator status-online" />
@@ -358,9 +358,28 @@ const showMobileMenu = ref(false)
             </div>
           </div>
         </div>
+        <!-- 外城资源占位 -->
+        <div v-else class="flex items-center space-x-4">
+          <div class="resource-display rounded-lg px-3 py-1.5 flex items-center space-x-2 min-w-[8vw]">
+            <div class="status-indicator status-online" />
+            <div class="flex items-center space-x-1.5">
+              <span class="text-industrial-green text-lg">💰</span>
+              <div>
+                <div class="text-xs text-gray-400 uppercase" :class="language === 'zh' ? 'tracking-[0.2rem]' : 'tracking-wide'">
+                  {{ $t('topbar.credits') }}
+                </div>
+                <div class="text-base font-bold text-industrial-green neon-text">
+                  <AnimatedNumber :value="credits" :duration="3" separator="," />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <!-- 右侧城市信息和按钮 -->
         <div class="text-right flex items-center space-x-3">
           <!-- 城市信息 -->
+          <div class="flex items-center gap-4">
           <div>
             <h1 class="text-xl font-black text-industrial-accent neon-text uppercase tracking-wider">
               {{ cityName }}
@@ -420,6 +439,25 @@ const showMobileMenu = ref(false)
                   </div>
                 </div>
               </Teleport>
+              </div>
+            </div>
+
+            <!-- 场景切换按钮 -->
+            <div class="flex bg-gray-800 rounded-lg p-1 border border-gray-600">
+              <button
+                class="px-3 py-1 rounded text-xs font-bold transition-colors duration-200"
+                :class="gameState.currentScene === 'CITY' ? 'bg-industrial-yellow text-gray-900' : 'text-gray-400 hover:text-white'"
+                @click="gameState.setScene('CITY')"
+              >
+                🏙️ {{ language === 'zh' ? '内城' : 'City' }}
+              </button>
+              <button
+                class="px-3 py-1 rounded text-xs font-bold transition-colors duration-200"
+                :class="gameState.currentScene === 'TD' ? 'bg-red-500 text-white' : 'text-gray-400 hover:text-white'"
+                @click="gameState.setScene('TD')"
+              >
+                🛡️ {{ language === 'zh' ? '外城' : 'Defense' }}
+              </button>
             </div>
           </div>
 
@@ -549,7 +587,7 @@ const showMobileMenu = ref(false)
         </div>
       </div>
       <!-- 第二行：城市指标和系统状态（移动端隐藏） -->
-      <div v-if="!isMobileDevice" class="flex justify-between items-center pt-2 border-t border-gray-700">
+      <div v-if="!isMobileDevice && gameState.currentScene === 'CITY'" class="flex justify-between items-center pt-2 border-t border-gray-700">
         <!-- 城市指标 -->
         <div class="flex items-center space-x-4">
           <div class="flex items-center space-x-2">

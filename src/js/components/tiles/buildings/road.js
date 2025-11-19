@@ -30,13 +30,36 @@ export default class Road extends Building {
     if (!tile)
       return
 
+    // 支持内城和外城的 tile 命名格式
+    // 内城: Tile-${x}-${y}
+    // 外城: TDTile-${x}-${y}
+    // 两种格式都是 split('-') 后取 slice(1) 得到坐标
     const [x, y] = tile.name.split('-').slice(1).map(Number)
 
     // 检查相邻地块的建筑类型
-    const top = city.getTile(x, y - 1)?.buildingInstance?.type === 'road'
-    const bottom = city.getTile(x, y + 1)?.buildingInstance?.type === 'road'
-    const left = city.getTile(x - 1, y)?.buildingInstance?.type === 'road'
-    const right = city.getTile(x + 1, y)?.buildingInstance?.type === 'road'
+    // 对于外城，需要检查 tile.type === 'road' || 'start' || 'end'
+    const topTile = city.getTile(x, y - 1)
+    const bottomTile = city.getTile(x, y + 1)
+    const leftTile = city.getTile(x - 1, y)
+    const rightTile = city.getTile(x + 1, y)
+    
+    // 检查相邻地块是否有道路（支持内城和外城）
+    const top = topTile && (
+      topTile.buildingInstance?.type === 'road' || 
+      (topTile.type && (topTile.type === 'road' || topTile.type === 'start' || topTile.type === 'end'))
+    )
+    const bottom = bottomTile && (
+      bottomTile.buildingInstance?.type === 'road' || 
+      (bottomTile.type && (bottomTile.type === 'road' || bottomTile.type === 'start' || bottomTile.type === 'end'))
+    )
+    const left = leftTile && (
+      leftTile.buildingInstance?.type === 'road' || 
+      (leftTile.type && (leftTile.type === 'road' || leftTile.type === 'start' || leftTile.type === 'end'))
+    )
+    const right = rightTile && (
+      rightTile.buildingInstance?.type === 'road' || 
+      (rightTile.type && (rightTile.type === 'road' || rightTile.type === 'start' || rightTile.type === 'end'))
+    )
 
     let resourceName = 'road' // 默认为直线
     let rotationY = 0

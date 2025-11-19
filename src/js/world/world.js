@@ -33,4 +33,26 @@ export default class World {
       this.interactor.update()
     }
   }
+
+  show() {
+    if (this.city && this.city.root) {
+      this.city.root.visible = true
+    }
+    if (this.environment) {
+      if (this.environment.sunLight) this.environment.sunLight.visible = true
+      if (this.environment.ambientLight) this.environment.ambientLight.visible = true
+      if (this.environment.hemisphereLight) this.environment.hemisphereLight.visible = true
+    }
+  }
+
+  hide() {
+    if (this.city && this.city.root) {
+      this.city.root.visible = false
+    }
+    if (this.environment) {
+      if (this.environment.sunLight) this.environment.sunLight.visible = false
+      if (this.environment.ambientLight) this.environment.ambientLight.visible = false
+      if (this.environment.hemisphereLight) this.environment.hemisphereLight.visible = false
+    }
+  }
 }

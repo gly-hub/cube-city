@@ -17,6 +17,7 @@ import QuestPanel from './components/QuestPanel.vue'
 import LevelUnlockModal from './components/LevelUnlockModal.vue'
 import AchievementPanel from './components/AchievementPanel.vue'
 import TechTreePanel from './components/TechTreePanel.vue'
+import TowerDefenseUI from './components/td/TowerDefenseUI.vue'
 import { useBuilding } from './hooks/useBuilding.js'
 import { useMobile } from './composables/useMobile.js'
 
@@ -137,6 +138,8 @@ onUnmounted(() => {
     <TopBar />
     <!-- 桌面端布局：水平排列 -->
     <div v-if="!isMobileDevice" class="flex gap-2 px-2 h-[calc(100vh-160px)]">
+      <!-- 内城模式 UI -->
+      <template v-if="gameState.currentScene === 'CITY'">
       <BuildingSidebar />
       <main class="flex-1 industrial-panel shadow-industrial relative overflow-hidden industrial-grid">
         <ModeIndicator />
@@ -157,10 +160,18 @@ onUnmounted(() => {
           <MapOverview />
         </div>
       </transition>
+      </template>
+
+      <!-- 外城模式 UI -->
+      <template v-else-if="gameState.currentScene === 'TD'">
+        <TowerDefenseUI />
+      </template>
     </div>
 
     <!-- 移动端布局：垂直排列，侧边栏和面板改为抽屉式 -->
     <div v-else class="flex flex-col h-[calc(100vh-100px)] relative">
+      <!-- 内城模式 UI -->
+      <template v-if="gameState.currentScene === 'CITY'">
       <!-- 主游戏区域 -->
       <main class="flex-1 industrial-panel shadow-industrial relative overflow-hidden industrial-grid">
         <ModeIndicator />
@@ -262,6 +273,12 @@ onUnmounted(() => {
           <MapOverview />
         </div>
       </transition>
+      </template>
+
+      <!-- 外城模式 UI (移动端) -->
+      <template v-else-if="gameState.currentScene === 'TD'">
+        <TowerDefenseUI />
+      </template>
     </div>
 
     <ToastContainer />

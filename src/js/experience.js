@@ -12,6 +12,7 @@ import Stats from './utils/stats.js'
 import Time from './utils/time.js'
 import PhysicsWorld from './world/physics-world.js'
 import World from './world/world.js'
+import TowerDefenseWorld from './td/tower-defense-world.js'
 import LevelSystem from './utils/level-system.js'
 import QuestSystem from './utils/quest-system.js'
 import AchievementSystem from './utils/achievement-system.js'
@@ -48,7 +49,14 @@ export default class Experience {
     this.physics = new PhysicsWorld()
     this.iMouse = new IMouse()
     this.world = new World()
+    this.tdWorld = new TowerDefenseWorld()
     this.gameState = useGameState()
+
+    // 监听场景切换事件
+    this.eventBus.on('scene:change', (scene) => {
+      console.log('Scene switching to:', scene)
+      this.switchScene(scene)
+    })
 
     // 初始化关卡系统、任务系统、成就系统和科技系统
     this.levelSystem = new LevelSystem()
@@ -98,9 +106,28 @@ export default class Experience {
     this.renderer.resize()
   }
 
+  switchScene(sceneName) {
+    if (sceneName === 'CITY') {
+      this.tdWorld.hide()
+      this.world.show()
+      // 可以在这里重置相机位置到内城视角
+    } else if (sceneName === 'TD') {
+      this.world.hide()
+      this.tdWorld.show()
+      // 可以在这里重置相机位置到外城视角
+    }
+  }
+
   update() {
     this.camera.update()
+    
+    // 根据当前场景更新对应的世界
+    if (this.gameState.currentScene === 'CITY') {
     this.world.update()
+    } else if (this.gameState.currentScene === 'TD') {
+      this.tdWorld.update()
+    }
+
     this.renderer.update() // 切换为手动更新
     this.stats.update()
     this.iMouse.update()
