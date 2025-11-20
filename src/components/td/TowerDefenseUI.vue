@@ -4,6 +4,7 @@ import { eventBus } from '@/js/utils/event-bus.js'
 import { ref, onMounted, onUnmounted } from 'vue'
 import TowerSidebar from './TowerSidebar.vue'
 import TowerInfoPanel from './TowerInfoPanel.vue'
+import SkillBar from './SkillBar.vue'
 import WavePreview from './WavePreview.vue'
 
 const gameState = useGameState()
@@ -101,7 +102,7 @@ onUnmounted(() => {
 
       <!-- 底部操作栏 -->
       <div class="absolute bottom-4 left-1/2 transform -translate-x-1/2 z-10 pointer-events-none">
-        <div class="pointer-events-auto flex flex-col items-center gap-2">
+        <div class="pointer-events-auto flex flex-col items-center gap-3">
           <div class="text-xs text-gray-300 bg-black/50 px-2 py-1 rounded">
             {{ gameState.language === 'zh' ? '点击空地建造防御塔' : 'Click empty tiles to build towers' }}
           </div>
@@ -113,6 +114,9 @@ onUnmounted(() => {
           >
             {{ isWaveActive ? '⚔️ 战斗中...' : '⚔️ 开始下一波' }}
           </button>
+          
+          <!-- 新增：技能栏 -->
+          <SkillBar />
         </div>
       </div>
     </main>

@@ -9,6 +9,8 @@ import { getWaveComposition } from './enemy-types.js'
 import { getTowerConfig, TargetPriority } from './tower-config.js'
 import TowerFactory from './tower-factory.js'
 import { findTarget, applySpecialEffect, calculateDamage, createDamageText } from './tower-attack-utils.js'
+import { SkillSystem } from './active-skills.js'
+import { createRangeIndicator } from './skill-effects.js'
 
 export default class TowerDefenseWorld {
   constructor() {
@@ -32,6 +34,11 @@ export default class TowerDefenseWorld {
 
     // ===== 新增：初始化模型工厂 =====
     this.enemyModelFactory = new EnemyModelFactory(this.resources)
+    
+    // ===== 新增：初始化技能系统（延迟到 init）=====
+    this.skillSystem = null
+    this.skillRangeIndicator = null // 技能范围指示器
+    this.skillUpdateInterval = null // 技能状态更新定时器
 
     // 游戏状态（从 gameState 读取，支持持久化）
     this.wave = this.gameState.tdGameData.wave
@@ -62,6 +69,7 @@ export default class TowerDefenseWorld {
     this.boundHandleDragOver = this.handleDragOver.bind(this)
     this.boundHandleDrop = this.handleDrop.bind(this)
     this.boundHandleDragLeave = this.handleDragLeave.bind(this)
+    // 技能事件处理器会在 initSkillListeners 中绑定
     
     // 注意：事件监听器在 show() 时添加，在 hide() 时移除，避免干扰内城
     this.eventListenersAttached = false
@@ -85,6 +93,15 @@ export default class TowerDefenseWorld {
   }
 
   init() {
+    // ===== 先初始化技能系统 =====
+    try {
+      this.skillSystem = new SkillSystem(this)
+      console.log('✅ 技能系统初始化成功')
+    } catch (error) {
+      console.error('❌ 技能系统初始化失败:', error)
+      this.skillSystem = null
+    }
+    
     // 创建环境（光照等）
     this.createEnvironment()
     
@@ -96,6 +113,58 @@ export default class TowerDefenseWorld {
         this.createCity()
       })
     }
+    
+    // ===== 新增：初始化技能系统监听 =====
+    if (this.skillSystem) {
+      this.initSkillListeners()
+    }
+  }
+  
+  /**
+   * 初始化技能系统监听
+   */
+  initSkillListeners() {
+    if (!this.skillSystem) {
+      console.warn('⚠️ 技能系统未初始化，跳过监听器设置')
+      return
+    }
+    
+    // 监听技能选择事件
+    this.experience.eventBus.on('td:skill-select', (data) => {
+      if (this.handleSkillSelect) {
+        this.handleSkillSelect(data)
+      } else {
+        console.warn('⚠️ handleSkillSelect 方法未定义')
+      }
+    })
+    this.experience.eventBus.on('td:skill-cancel', () => {
+      if (this.handleSkillCancel) {
+        this.handleSkillCancel()
+      }
+    })
+    this.experience.eventBus.on('td:cancel-skill', () => {
+      if (this.handleSkillCancel) {
+        this.handleSkillCancel()
+      }
+    })
+    
+    // 创建技能范围指示器（延迟创建，确保 root 已准备好）
+    // 注意：不在 initSkillListeners 中创建，而是在第一次使用时创建
+    // 这样可以避免在 root 未准备好时添加对象
+    this.skillRangeIndicator = null
+    console.log('📝 技能范围指示器将在首次使用时创建')
+    
+    // 定期更新技能状态到UI
+    this.skillUpdateInterval = setInterval(() => {
+      if (this.root.visible && this.skillSystem) {
+        try {
+          const status = this.skillSystem.getSkillsStatus()
+          this.experience.eventBus.emit('td:skill-status-update', status)
+        } catch (error) {
+          console.error('❌ 技能状态更新失败:', error)
+        }
+      }
+    }, 100) // 每100ms更新一次
   }
 
   createEnvironment() {
@@ -106,6 +175,12 @@ export default class TowerDefenseWorld {
   createCity() {
     console.log('创建外城城市')
     
+    // ===== 检查资源是否加载 =====
+    if (!this.resources.items.grass) {
+      console.error('❌ 草地纹理未加载，无法创建外城')
+      return
+    }
+    
     // 如果 city 已存在，先清理旧数据
     if (this.city) {
       console.log('清理旧的外城数据')
@@ -114,18 +189,25 @@ export default class TowerDefenseWorld {
         this.root.remove(this.city.root)
       }
       this.city = null
+      // 清理缓存的地面网格
+      this._groundMeshes = null
     }
     
-    this.city = new TDCity()
-    // 将 city 的 root 添加到 tdWorld 的 root
-    this.root.add(this.city.root)
-    // 路径点从 city 中获取
-    this.pathPoints = this.city.pathPoints
-    console.log('外城创建完成，路径点数量:', this.pathPoints.length)
-    console.log('外城 root 层级:', this.root.children.length, 'city root 层级:', this.city.root.children.length)
+    try {
+      this.city = new TDCity()
+      // 将 city 的 root 添加到 tdWorld 的 root
+      this.root.add(this.city.root)
+      // 路径点从 city 中获取
+      this.pathPoints = this.city.pathPoints
+      console.log('✅ 外城创建完成，路径点数量:', this.pathPoints.length)
+      console.log('外城 root 层级:', this.root.children.length, 'city root 层级:', this.city.root.children.length)
 
-    // 恢复已保存的防御塔
-    this.restoreTowers()
+      // 恢复已保存的防御塔
+      this.restoreTowers()
+    } catch (error) {
+      console.error('❌ 创建外城失败:', error)
+      this.city = null
+    }
   }
 
   /**
@@ -276,6 +358,18 @@ export default class TowerDefenseWorld {
 
     try {
       this.raycaster.setFromCamera(this.iMouse.normalizedMouse, this.experience.camera.instance)
+      
+      // ===== 移除点击释放技能的逻辑，只保留拖拽释放 =====
+      // 如果技能系统处于激活状态，点击地面应该取消技能选择
+      if (this.skillSystem && this.skillSystem.activeSkillId) {
+        console.log('🎯 技能已激活，点击地面取消技能选择')
+        this.skillSystem.cancelSkill()
+        if (this.skillRangeIndicator) {
+          this.skillRangeIndicator.visible = false
+        }
+        this.isHandlingClick = false
+        return
+      }
     
       // 检测点击的对象：同时检测 tile 和 tower
       const allObjects = []
@@ -505,36 +599,173 @@ export default class TowerDefenseWorld {
 
   // 拖拽悬停处理
   handleDragOver(event) {
-    if (!this.draggingTowerType || this.gameState.currentScene !== 'TD') {
+    if (this.gameState.currentScene !== 'TD') {
       return
     }
+    
     if (!this.root.visible || !this.city) {
       return
     }
+    
     event.preventDefault()
-    event.dataTransfer.dropEffect = 'copy'
     
-    // 更新鼠标位置（用于射线检测）
+    // ===== 更新鼠标位置（技能和塔都需要）=====
     const rect = this.experience.canvas.getBoundingClientRect()
-    const mouse = new THREE.Vector2()
-    mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1
-    mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1
+    const mouseX = ((event.clientX - rect.left) / rect.width) * 2 - 1
+    const mouseY = -((event.clientY - rect.top) / rect.height) * 2 + 1
     
-    // 临时更新 iMouse 的 normalizedMouse（用于预览）
-    this.iMouse.normalizedMouse.x = mouse.x
-    this.iMouse.normalizedMouse.y = mouse.y
+    // 更新 iMouse 的 normalizedMouse（必须在调用 updateSkillIndicator 之前更新）
+    this.iMouse.normalizedMouse.x = mouseX
+    this.iMouse.normalizedMouse.y = mouseY
+    
+    // 检查是否在拖拽技能
+    // 方法1：通过 dataTransfer.types（如果可用）
+    const types = Array.from(event.dataTransfer.types || [])
+    const hasSkillId = types.includes('skillId') || types.includes('text/plain')
+    
+    // 方法2：通过技能系统状态（更可靠）
+    const isDraggingSkill = hasSkillId || (this.skillSystem && this.skillSystem.activeSkillId)
+    
+    if (isDraggingSkill) {
+      event.dataTransfer.dropEffect = 'move'
+      // ===== 技能拖拽时，实时更新范围指示器位置 =====
+      if (this.skillRangeIndicator && this.skillRangeIndicator.visible) {
+        // 直接在这里更新位置，而不是调用 updateSkillIndicator（避免鼠标位置检查）
+        this.updateSkillIndicatorPosition(mouseX, mouseY)
+      }
+      // 确保允许放置
+      event.dataTransfer.effectAllowed = 'move'
+      return
+    }
+    
+    // 原有的防御塔拖拽逻辑
+    if (!this.draggingTowerType) {
+      return
+    }
+    
+    event.dataTransfer.dropEffect = 'copy'
   }
 
   // 拖拽放置处理
   handleDrop(event) {
-    if (!this.draggingTowerType || this.gameState.currentScene !== 'TD') {
+    event.preventDefault()
+    event.stopPropagation()
+    
+    console.log('🎯 handleDrop 被调用', {
+      scene: this.gameState.currentScene,
+      rootVisible: this.root.visible,
+      hasCity: !!this.city,
+      dataTransferTypes: Array.from(event.dataTransfer.types || []),
+      skillSystem: !!this.skillSystem
+    })
+    
+    if (this.gameState.currentScene !== 'TD') {
+      console.warn('❌ 不在塔防场景，忽略 drop')
       return
     }
+    
     if (!this.root.visible || !this.city) {
+      console.warn('❌ 外城未显示或城市未创建，忽略 drop')
       this.draggingTowerType = null
       return
     }
-    event.preventDefault()
+    
+    // ===== 检查是否在拖拽技能 =====
+    // 方法1：从 dataTransfer 获取
+    let skillId = event.dataTransfer.getData('skillId')
+    
+    // 方法2：如果获取不到，尝试从 text/plain 获取
+    if (!skillId) {
+      skillId = event.dataTransfer.getData('text/plain')
+    }
+    
+    // 方法3：如果还是获取不到，通过技能系统状态判断
+    if (!skillId && this.skillSystem && this.skillSystem.activeSkillId) {
+      skillId = this.skillSystem.activeSkillId
+      console.log('⚠️ 从 dataTransfer 无法获取 skillId，使用 activeSkillId:', skillId)
+    }
+    
+    if (skillId && this.skillSystem) {
+      console.log('🎯 拖拽释放技能:', skillId)
+      
+      // 更新鼠标位置
+      const rect = this.experience.canvas.getBoundingClientRect()
+      const mouseX = ((event.clientX - rect.left) / rect.width) * 2 - 1
+      const mouseY = -((event.clientY - rect.top) / rect.height) * 2 + 1
+      
+      console.log('📍 鼠标位置:', {
+        clientX: event.clientX,
+        clientY: event.clientY,
+        rect,
+        normalizedMouse: { x: mouseX, y: mouseY }
+      })
+      
+      this.iMouse.normalizedMouse.x = mouseX
+      this.iMouse.normalizedMouse.y = mouseY
+      
+      // 获取拖放位置（使用和 handleClick 相同的方法）
+      this.raycaster.setFromCamera(this.iMouse.normalizedMouse, this.experience.camera.instance)
+      
+      // ===== 使用和 handleClick 相同的检测方法 =====
+      // 收集所有 tile 的 grassMesh
+      const allGroundMeshes = []
+      if (this.city && this.city.meshes) {
+        this.city.meshes.forEach(row => {
+          row.forEach(tile => {
+            if (tile && tile.grassMesh) {
+              allGroundMeshes.push(tile.grassMesh)
+            }
+          })
+        })
+      }
+      
+      console.log('🔍 地面网格数量:', allGroundMeshes.length)
+      
+      // 使用 recursive: true 确保检测到所有子对象
+      const groundIntersects = this.raycaster.intersectObjects(allGroundMeshes, true)
+      
+      console.log('🎯 射线检测结果:', {
+        intersectsCount: groundIntersects.length,
+        firstIntersect: groundIntersects[0] ? {
+          point: groundIntersects[0].point,
+          object: groundIntersects[0].object,
+          distance: groundIntersects[0].distance
+        } : null
+      })
+      
+      if (groundIntersects.length > 0) {
+        const dropPosition = groundIntersects[0].point
+        console.log('✅ 拖放位置:', dropPosition)
+        
+        // 使用技能
+        const success = this.skillSystem.useSkill(dropPosition)
+        
+        if (success) {
+          console.log('🎉 技能释放成功！')
+        } else {
+          console.warn('❌ 技能释放失败（金币不足或冷却中）')
+        }
+      } else {
+        console.warn('❌ 未拖放到有效位置')
+        this.experience.eventBus.emit('toast:add', {
+          message: this.gameState.language === 'zh' ? '请拖拽到地面释放技能' : 'Drag to ground to use skill',
+          type: 'warning',
+          duration: 2000,
+        })
+      }
+      
+      // 隐藏范围指示器
+      if (this.skillRangeIndicator) {
+        this.skillRangeIndicator.visible = false
+      }
+      
+      return
+    }
+    
+    // 原有的防御塔放置逻辑
+    if (!this.draggingTowerType) {
+      return
+    }
     
     // 射线检测找到放置位置
     this.raycaster.setFromCamera(this.iMouse.normalizedMouse, this.experience.camera.instance)
@@ -799,6 +1030,11 @@ export default class TowerDefenseWorld {
     // 更新城市
     if (this.city) {
       this.city.update()
+    }
+    
+    // ===== 更新技能范围指示器（优化：只在需要时更新）=====
+    if (this.skillSystem && this.skillSystem.activeSkillId && this.skillRangeIndicator && this.skillRangeIndicator.visible) {
+      this.updateSkillIndicator()
     }
 
     // 更新敌人（使用新的 Enemy 类）
@@ -1240,11 +1476,22 @@ export default class TowerDefenseWorld {
     const isDead = enemy.takeDamage(finalDamage)
     
     // ===== 显示伤害飘字 =====
-    createDamageText(enemy.getPosition(), finalDamage, isCritical, this.root)
-    
-    // ===== 应用特殊效果（减速、AOE等） =====
-    if (tower && tower.userData.specialEffect) {
-      applySpecialEffect(tower, enemy, this.enemies, baseDamage, this.root)
+    // 修复：使用 this.scene 而不是 this.root，确保特效正确添加到场景中
+    // 第一次放置时，this.root 可能还没有完全准备好，使用 this.scene 更可靠
+    // 注意：createDamageText 和 createAOEEffect 都需要 THREE.Scene，而不是 THREE.Group
+    if (this.scene) {
+      createDamageText(enemy.getPosition(), finalDamage, isCritical, this.scene)
+      
+      // ===== 应用特殊效果（减速、AOE等） =====
+      if (tower && tower.userData.specialEffect) {
+        applySpecialEffect(tower, enemy, this.enemies, baseDamage, this.scene)
+      }
+    } else {
+      console.warn('⚠️ 场景未准备好，无法创建攻击特效', {
+        hasScene: !!this.scene,
+        hasRoot: !!this.root,
+        rootVisible: this.root?.visible
+      })
     }
     
     if (isDead) {
@@ -1384,7 +1631,15 @@ export default class TowerDefenseWorld {
           this.city.show()
         }
       } else {
-        console.error('资源未加载，无法创建外城')
+        console.warn('⚠️ 资源未加载完成，等待资源加载...')
+        // 等待资源加载完成
+        this.resources.on('ready', () => {
+          console.log('✅ 资源加载完成，现在创建外城')
+          this.createCity()
+          if (this.city) {
+            this.city.show()
+          }
+        })
       }
     }
     
@@ -1419,8 +1674,12 @@ export default class TowerDefenseWorld {
       this.experience.canvas.addEventListener('dragover', this.boundHandleDragOver)
       this.experience.canvas.addEventListener('drop', this.boundHandleDrop)
       this.experience.canvas.addEventListener('dragleave', this.boundHandleDragLeave)
+      
+      // ===== 确保 canvas 可以接收 drop 事件 =====
+      this.experience.canvas.style.pointerEvents = 'auto'
+      
       this.eventListenersAttached = true
-      console.log('外城事件监听器已添加')
+      console.log('✅ 外城事件监听器已添加，canvas 已启用拖拽')
     }
   }
 
@@ -1442,8 +1701,184 @@ export default class TowerDefenseWorld {
     
     // 注意：不隐藏环境光，因为内城可能也需要使用
   }
+  
+  /**
+   * 处理技能选择
+   * @param {object} data - { skillId }
+   */
+  handleSkillSelect(data) {
+    if (!this.skillSystem) {
+      console.warn('⚠️ 技能系统未初始化')
+      return
+    }
+    
+    const { skillId } = data
+    console.log('📥 handleSkillSelect 接收:', { 
+      skillId, 
+      skills: this.skillSystem.skills,
+      credits: this.gameState.credits  // 修复：直接从 gameState 获取
+    })
+    
+    // 检查技能是否存在
+    const skill = this.skillSystem.skills[skillId]
+    if (!skill) {
+      console.error('❌ 技能不存在:', skillId)
+      return
+    }
+    
+    // 检查是否可用
+    const credits = this.gameState.credits || 0  // 修复
+    console.log('🔍 检查技能可用性:', {
+      skillId,
+      canUse: skill.canUse(credits),
+      remainingCooldown: skill.getRemainingCooldown(),
+      credits,
+      cost: skill.cost
+    })
+    
+    const success = this.skillSystem.selectSkill(skillId)
+    
+    if (!success) {
+      console.warn(`❌ 无法选择技能: ${skillId}`)
+      return
+    }
+    
+    console.log('✅ 技能选择成功:', skillId)
+    
+    // ===== 延迟创建范围指示器（如果还没有创建）=====
+    if (!this.skillRangeIndicator) {
+      try {
+        console.log('📝 首次使用，创建技能范围指示器')
+        this.skillRangeIndicator = createRangeIndicator(2.5, '#ffffff')
+        if (this.skillRangeIndicator && this.skillRangeIndicator instanceof THREE.Object3D) {
+          // 确保 root 已准备好
+          if (this.root && this.root instanceof THREE.Object3D) {
+            this.root.add(this.skillRangeIndicator)
+            console.log('✅ 技能范围指示器创建并添加到场景成功')
+          } else {
+            console.error('❌ root 未准备好，无法添加范围指示器')
+            this.skillRangeIndicator = null
+          }
+        } else {
+          console.error('❌ 技能范围指示器创建失败: 返回的对象不是 THREE.Object3D', this.skillRangeIndicator)
+          this.skillRangeIndicator = null
+        }
+      } catch (error) {
+        console.error('❌ 技能范围指示器创建失败:', error)
+        this.skillRangeIndicator = null
+      }
+    }
+    
+    // 显示范围指示器
+    if (this.skillRangeIndicator && this.skillRangeIndicator instanceof THREE.Object3D) {
+      // 根据技能类型设置范围
+      if (skill) {
+        const radius = skill.radius || 2.5
+        const color = skillId === 'airstrike' ? '#ff0000' : 
+                     skillId === 'freeze' ? '#00ffff' : 
+                     '#ffff00'
+        
+        // 更新指示器
+        if (this.skillRangeIndicator.geometry) {
+          this.skillRangeIndicator.geometry.dispose()
+        }
+        this.skillRangeIndicator.geometry = new THREE.RingGeometry(radius - 0.1, radius, 32)
+        if (this.skillRangeIndicator.material && this.skillRangeIndicator.material.color) {
+          this.skillRangeIndicator.material.color.setStyle(color)
+        }
+        this.skillRangeIndicator.visible = true
+        console.log('✅ 范围指示器已显示，半径:', radius)
+      }
+    } else {
+      console.warn('⚠️ 技能范围指示器未初始化，无法显示')
+    }
+    
+    console.log(`✅ 技能已选择: ${skillId}，点击地面使用`)
+  }
+  
+  /**
+   * 处理技能取消
+   */
+  handleSkillCancel() {
+    if (!this.skillSystem) return
+    
+    console.log('❌ 取消技能选择')
+    this.skillSystem.cancelSkill()
+    
+    // 隐藏范围指示器
+    if (this.skillRangeIndicator) {
+      this.skillRangeIndicator.visible = false
+    }
+  }
+  
+  /**
+   * 更新技能范围指示器位置（跟随鼠标）
+   * @param {number} mouseX - 归一化鼠标 X 坐标（可选，如果不提供则使用 iMouse.normalizedMouse）
+   * @param {number} mouseY - 归一化鼠标 Y 坐标（可选，如果不提供则使用 iMouse.normalizedMouse）
+   */
+  updateSkillIndicator(mouseX = null, mouseY = null) {
+    if (!this.skillRangeIndicator || !this.skillRangeIndicator.visible || !this.city) return
+    
+    // 使用传入的鼠标位置，或使用 iMouse.normalizedMouse
+    const normalizedMouse = mouseX !== null && mouseY !== null 
+      ? new THREE.Vector2(mouseX, mouseY)
+      : this.iMouse.normalizedMouse
+    
+    // 优化：不在每一帧都进行射线检测，太耗性能
+    // 只在鼠标移动时更新（仅在未传入鼠标位置时检查）
+    if (mouseX === null && mouseY === null) {
+      if (!this._lastMousePosition) {
+        this._lastMousePosition = new THREE.Vector2()
+      }
+      
+      const mouseChanged = !this._lastMousePosition.equals(normalizedMouse)
+      if (!mouseChanged) return
+      
+      this._lastMousePosition.copy(normalizedMouse)
+    }
+    
+    this.raycaster.setFromCamera(normalizedMouse, this.experience.camera.instance)
+    
+    // 收集所有地面网格
+    const allGroundMeshes = []
+    this.city.meshes.forEach(row => {
+      row.forEach(tile => {
+        if (tile && tile.grassMesh) {
+          allGroundMeshes.push(tile.grassMesh)
+        }
+      })
+    })
+    
+    // 使用 recursive: true 确保检测到所有子对象
+    const groundIntersects = this.raycaster.intersectObjects(allGroundMeshes, true)
+    
+    if (groundIntersects.length > 0) {
+      const position = groundIntersects[0].point
+      this.skillRangeIndicator.position.copy(position)
+      this.skillRangeIndicator.position.y = 0.15
+    }
+  }
+  
+  /**
+   * 直接更新技能范围指示器位置（用于拖拽过程中）
+   * @param {number} mouseX - 归一化鼠标 X 坐标
+   * @param {number} mouseY - 归一化鼠标 Y 坐标
+   */
+  updateSkillIndicatorPosition(mouseX, mouseY) {
+    this.updateSkillIndicator(mouseX, mouseY)
+  }
 
   destroy() {
+    // ===== 清理技能系统 =====
+    if (this.skillUpdateInterval) {
+      clearInterval(this.skillUpdateInterval)
+    }
+    if (this.skillRangeIndicator) {
+      this.root.remove(this.skillRangeIndicator)
+      this.skillRangeIndicator.geometry.dispose()
+      this.skillRangeIndicator.material.dispose()
+    }
+    
     // 确保移除所有事件监听器
     this.hide()
     this.scene.remove(this.root)

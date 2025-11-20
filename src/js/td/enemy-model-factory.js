@@ -172,6 +172,105 @@ const ENEMY_MODEL_CONFIG = {
       },
     },
   },
+
+  // ===== 特殊类型 =====
+  flying: {
+    modelPath: null,
+    proceduralConfig: {
+      bodyColor: '#06b6d4',
+      bodyShape: 'sphere',
+      bodySize: { width: 0.5, height: 0.4, depth: 0.5 },
+      hasLegs: false,
+      hasArms: false,
+      hasHead: false,
+      hasWings: true, // 翅膀
+      glow: true,
+    },
+    animations: {
+      run: {
+        type: 'procedural',
+        bobAmount: 0.25,
+        bobSpeed: 10,
+        float: true, // 漂浮效果
+        wingFlap: true,
+      },
+    },
+  },
+
+  stealth: {
+    modelPath: null,
+    proceduralConfig: {
+      bodyColor: '#8b5cf6',
+      bodyShape: 'capsule',
+      bodySize: { width: 0.35, height: 0.75, depth: 0.35 },
+      hasLegs: true,
+      legCount: 2,
+      hasArms: true,
+      hasHead: true,
+      headSize: 0.2,
+      transparent: true, // 半透明
+      opacity: 0.5,
+    },
+    animations: {
+      run: {
+        type: 'procedural',
+        bobAmount: 0.1,
+        bobSpeed: 9,
+        tiltAmount: 0.08,
+        legSwingAmount: 0.3,
+        shimmer: true, // 闪烁效果
+      },
+    },
+  },
+
+  healer: {
+    modelPath: null,
+    proceduralConfig: {
+      bodyColor: '#10b981',
+      bodyShape: 'sphere',
+      bodySize: { width: 0.5, height: 0.6, depth: 0.5 },
+      hasLegs: true,
+      legCount: 3,
+      hasArms: false,
+      hasHead: false,
+      glow: true,
+      healingAura: true, // 治疗光环
+    },
+    animations: {
+      run: {
+        type: 'procedural',
+        bobAmount: 0.12,
+        bobSpeed: 5,
+        tiltAmount: 0.05,
+        legSwingAmount: 0.2,
+        pulse: true, // 脉冲效果
+      },
+    },
+  },
+
+  splitter: {
+    modelPath: null,
+    proceduralConfig: {
+      bodyColor: '#f97316',
+      bodyShape: 'box',
+      bodySize: { width: 0.6, height: 0.6, depth: 0.6 },
+      hasLegs: true,
+      legCount: 4,
+      hasArms: false,
+      hasHead: false,
+      crystalline: true, // 结晶体外观
+    },
+    animations: {
+      run: {
+        type: 'procedural',
+        bobAmount: 0.1,
+        bobSpeed: 6,
+        tiltAmount: 0.1,
+        legSwingAmount: 0.25,
+        rotate: true, // 旋转效果
+      },
+    },
+  },
 }
 
 /**
