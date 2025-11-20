@@ -42,6 +42,12 @@ export default class Enemy {
       burn: { active: false, dps: 0, duration: 0 },               // 燃烧效果
     }
     
+    // ===== 特殊怪物状态 =====
+    this.isStealthed = false          // 隐身状态
+    this.stealthTimer = 0              // 隐身计时器
+    this.healTimer = 0                 // 治疗计时器
+    this.time = 0                      // 存活时间（秒）
+    
     // 创建 3D 模型（使用模型工厂）
     this.modelFactory = modelFactory
     if (modelFactory) {
@@ -60,6 +66,11 @@ export default class Enemy {
     }
     
     this.mesh.position.copy(path[0])
+    
+    // 飞行单位：调整初始高度
+    if (this.stats.special?.isFlying) {
+      this.mesh.position.y += this.stats.special.altitude
+    }
     
     // 存储引用到 userData 供其他系统使用
     this.mesh.userData = {
@@ -206,8 +217,14 @@ export default class Enemy {
   update(dt) {
     if (!this.isAlive) return false
     
+    // 更新存活时间
+    this.time += dt
+    
     // 更新状态效果
     this.updateEffects(dt)
+    
+    // 更新特殊怪物行为
+    this.updateSpecialBehaviors(dt)
     
     // 更新动画
     if (this.modelFactory) {
@@ -287,12 +304,22 @@ export default class Enemy {
       this.progress = 0
       this.mesh.position.copy(targetPoint)
       
+      // 飞行单位：保持高度
+      if (this.stats.special?.isFlying) {
+        this.mesh.position.y += this.stats.special.altitude
+      }
+      
       // 递归更新，处理高速单位一帧移动多个点的情况
       if (this.pathIndex + 1 < this.path.length) {
         return this.updateMovement(0)
       }
     } else {
       this.mesh.position.lerpVectors(currentPoint, targetPoint, this.progress)
+      
+      // 飞行单位：保持高度
+      if (this.stats.special?.isFlying) {
+        this.mesh.position.y += this.stats.special.altitude
+      }
     }
     
     return false
@@ -363,6 +390,176 @@ export default class Enemy {
    */
   isBurning() {
     return this.effects.burn.active
+  }
+  
+  /**
+   * 治疗
+   * @param {number} amount - 治疗量
+   */
+  heal(amount) {
+    if (!this.isAlive) return
+    
+    this.health = Math.min(this.health + amount, this.maxHealth)
+    
+    // 视觉反馈：绿色闪光
+    this.flashHeal()
+  }
+  
+  /**
+   * 治疗闪光效果
+   */
+  flashHeal() {
+    const meshes = []
+    
+    if (this.mesh.isGroup) {
+      this.mesh.traverse((child) => {
+        if (child.isMesh && child.material) {
+          meshes.push({ mesh: child, originalColor: child.material.color.clone() })
+        }
+      })
+    } else if (this.mesh.isMesh && this.mesh.material) {
+      meshes.push({ mesh: this.mesh, originalColor: this.mesh.material.color.clone() })
+    }
+    
+    // 变绿
+    meshes.forEach(({ mesh }) => {
+      if (mesh.material) {
+        mesh.material.color.setHex(0x22c55e)
+      }
+    })
+    
+    // 0.2秒后恢复
+    setTimeout(() => {
+      meshes.forEach(({ mesh, originalColor }) => {
+        if (mesh.material) {
+          mesh.material.color.copy(originalColor)
+        }
+      })
+    }, 200)
+  }
+  
+  /**
+   * 更新特殊怪物行为
+   * @param {number} dt - 帧时间（秒）
+   */
+  updateSpecialBehaviors(dt) {
+    if (!this.stats.special) return
+    
+    // ===== 隐身单位 =====
+    if (this.stats.special.stealthCycle) {
+      this.updateStealthBehavior(dt)
+    }
+    
+    // ===== 治疗单位 =====
+    if (this.stats.special.healRange) {
+      this.updateHealBehavior(dt)
+    }
+    
+    // 飞行单位的行为已在 updateMovement 中处理
+  }
+  
+  /**
+   * 更新隐身行为
+   * @param {number} dt - 帧时间（秒）
+   */
+  updateStealthBehavior(dt) {
+    const { stealthCycle, stealthDuration, opacity } = this.stats.special
+    
+    this.stealthTimer += dt
+    
+    // 循环计时器
+    if (this.stealthTimer >= stealthCycle) {
+      this.stealthTimer = 0
+    }
+    
+    // 判断是否在隐身时间内
+    const shouldBeStealth = this.stealthTimer < stealthDuration
+    
+    // 状态切换
+    if (shouldBeStealth && !this.isStealthed) {
+      this.enterStealth(opacity)
+    } else if (!shouldBeStealth && this.isStealthed) {
+      this.exitStealth()
+    }
+  }
+  
+  /**
+   * 进入隐身状态
+   * @param {number} opacity - 隐身透明度
+   */
+  enterStealth(opacity) {
+    this.isStealthed = true
+    
+    // 设置透明度
+    if (this.mesh.isGroup) {
+      this.mesh.traverse((child) => {
+        if (child.isMesh && child.material) {
+          child.material.transparent = true
+          child.material.opacity = opacity
+        }
+      })
+    } else if (this.mesh.material) {
+      this.mesh.material.transparent = true
+      this.mesh.material.opacity = opacity
+    }
+  }
+  
+  /**
+   * 退出隐身状态
+   */
+  exitStealth() {
+    this.isStealthed = false
+    
+    // 恢复不透明
+    if (this.mesh.isGroup) {
+      this.mesh.traverse((child) => {
+        if (child.isMesh && child.material) {
+          child.material.opacity = 1.0
+          child.material.transparent = false
+        }
+      })
+    } else if (this.mesh.material) {
+      this.mesh.material.opacity = 1.0
+      this.mesh.material.transparent = false
+    }
+  }
+  
+  /**
+   * 更新治疗行为
+   * @param {number} dt - 帧时间（秒）
+   * @param {Array<Enemy>} allEnemies - 所有敌人（需要从外部传入）
+   */
+  updateHealBehavior(dt, allEnemies = []) {
+    const { healInterval } = this.stats.special
+    
+    this.healTimer += dt
+    
+    if (this.healTimer >= healInterval) {
+      this.healTimer = 0
+      this.performHeal(allEnemies)
+    }
+  }
+  
+  /**
+   * 执行治疗
+   * @param {Array<Enemy>} allEnemies - 所有敌人
+   */
+  performHeal(allEnemies) {
+    const { healRange, healAmount } = this.stats.special
+    const myPos = this.getPosition()
+    
+    // 治疗周围的怪物
+    for (const otherEnemy of allEnemies) {
+      if (!otherEnemy || otherEnemy === this || !otherEnemy.isAlive) continue
+      
+      const dist = myPos.distanceTo(otherEnemy.getPosition())
+      if (dist <= healRange) {
+        otherEnemy.heal(healAmount)
+        
+        // 可选：创建治疗连线效果
+        // this.createHealEffect(myPos, otherEnemy.getPosition())
+      }
+    }
   }
 }
 

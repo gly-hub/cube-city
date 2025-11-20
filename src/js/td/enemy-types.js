@@ -11,12 +11,19 @@ import * as THREE from 'three'
  * 怪物类型枚举
  */
 export const EnemyType = {
+  // 基础类型
   SCOUT: 'scout',       // 侦察兵：速度快，血量低，防御低
   TANK: 'tank',         // 坦克：速度慢，血量高，防御高
   RUNNER: 'runner',     // 冲锋兵：速度极快，血量一般，防御低
   ARMORED: 'armored',   // 装甲兵：速度一般，血量低，防御极高
   ELITE: 'elite',       // 精英：全属性平衡且较高
   BOSS: 'boss',         // Boss：全属性极高，超大体型
+  
+  // ===== 特殊类型 =====
+  FLYING: 'flying',     // 飞行单位：只能被防空塔攻击
+  STEALTH: 'stealth',   // 隐身单位：定期隐身，无法被锁定
+  HEALER: 'healer',     // 治疗单位：为周围怪物回血
+  SPLITTER: 'splitter', // 分裂单位：死亡后分裂成小怪
 }
 
 /**
@@ -132,6 +139,99 @@ export const ENEMY_BASE_CONFIG = {
     },
     description: '强大的Boss单位，拥有超高属性',
   },
+  
+  // ===== 特殊怪物类型 =====
+  
+  // 飞行单位：只能被防空塔攻击
+  [EnemyType.FLYING]: {
+    name: '飞行单位',
+    baseHealth: 50,
+    baseSpeed: 3.0,
+    baseDefense: 0,
+    baseReward: 15,
+    size: 0.6,
+    color: '#0ea5e9',      // 颜色（天蓝色）
+    growthRates: {
+      health: 0.12,
+      speed: 0.06,
+      defense: 0.01,
+      reward: 0.12,
+    },
+    description: '在空中飞行，普通塔无法攻击',
+    special: {
+      isFlying: true,      // 标记为飞行单位
+      altitude: 1.5,       // 飞行高度
+    },
+  },
+  
+  // 隐身单位：定期隐身，无法被锁定
+  [EnemyType.STEALTH]: {
+    name: '隐身单位',
+    baseHealth: 70,
+    baseSpeed: 3.5,
+    baseDefense: 0.1,
+    baseReward: 20,
+    size: 0.65,
+    color: '#a855f7',      // 颜色（紫色）
+    growthRates: {
+      health: 0.15,
+      speed: 0.07,
+      defense: 0.01,
+      reward: 0.15,
+    },
+    description: '会定期隐身，隐身时无法被攻击',
+    special: {
+      stealthCycle: 5,     // 隐身周期：5秒
+      stealthDuration: 2,  // 每次隐身持续 2秒
+      opacity: 0.3,        // 隐身时的透明度
+    },
+  },
+  
+  // 治疗单位：为周围怪物回血
+  [EnemyType.HEALER]: {
+    name: '治疗单位',
+    baseHealth: 100,
+    baseSpeed: 2.0,
+    baseDefense: 0.2,
+    baseReward: 30,        // 奖励高，鼓励优先击杀
+    size: 0.7,
+    color: '#22c55e',      // 颜色（亮绿色）
+    growthRates: {
+      health: 0.18,
+      speed: 0.04,
+      defense: 0.015,
+      reward: 0.2,
+    },
+    description: '为周围怪物恢复生命值，优先击杀目标',
+    special: {
+      healRange: 2.5,      // 治疗范围
+      healAmount: 10,      // 每次治疗量
+      healInterval: 2,     // 治疗间隔（秒）
+    },
+  },
+  
+  // 分裂单位：死亡后分裂成小怪
+  [EnemyType.SPLITTER]: {
+    name: '分裂单位',
+    baseHealth: 80,
+    baseSpeed: 2.5,
+    baseDefense: 0.15,
+    baseReward: 25,
+    size: 0.75,
+    color: '#fb923c',      // 颜色（橙色）
+    growthRates: {
+      health: 0.16,
+      speed: 0.05,
+      defense: 0.01,
+      reward: 0.15,
+    },
+    description: '死亡时分裂成多个小型单位',
+    special: {
+      splitCount: 3,       // 分裂数量
+      splitHealthRatio: 0.3,  // 小怪血量为母体的 30%
+      splitSpeedMultiplier: 1.2,  // 小怪速度提升 20%
+    },
+  },
 }
 
 /**
@@ -145,41 +245,50 @@ export const WAVE_COMPOSITION = {
   3: [
     { type: EnemyType.SCOUT, count: 5 },
     { type: EnemyType.RUNNER, count: 2 },
+    { type: EnemyType.FLYING, count: 2 },  // 首次出现飞行单位
   ],
   4: [
     { type: EnemyType.SCOUT, count: 4 },
     { type: EnemyType.TANK, count: 2 },
+    { type: EnemyType.FLYING, count: 2 },
   ],
   5: [
     { type: EnemyType.SCOUT, count: 5 },
     { type: EnemyType.RUNNER, count: 2 },
     { type: EnemyType.TANK, count: 1 },
+    { type: EnemyType.STEALTH, count: 2 },  // 首次出现隐身单位
   ],
   
   // 中等难度：6-10 波
   6: [
     { type: EnemyType.RUNNER, count: 5 },
     { type: EnemyType.ARMORED, count: 2 },
+    { type: EnemyType.HEALER, count: 1 },  // 首次出现治疗单位
   ],
   7: [
     { type: EnemyType.SCOUT, count: 6 },
     { type: EnemyType.TANK, count: 3 },
+    { type: EnemyType.SPLITTER, count: 2 },  // 首次出现分裂单位
   ],
   8: [
     { type: EnemyType.RUNNER, count: 4 },
     { type: EnemyType.ARMORED, count: 3 },
     { type: EnemyType.ELITE, count: 1 },
+    { type: EnemyType.FLYING, count: 3 },
   ],
   9: [
     { type: EnemyType.SCOUT, count: 5 },
     { type: EnemyType.TANK, count: 3 },
     { type: EnemyType.ELITE, count: 2 },
+    { type: EnemyType.STEALTH, count: 2 },
+    { type: EnemyType.HEALER, count: 1 },
   ],
   10: [
     { type: EnemyType.RUNNER, count: 5 },
     { type: EnemyType.ARMORED, count: 3 },
     { type: EnemyType.ELITE, count: 2 },
     { type: EnemyType.BOSS, count: 1 },
+    { type: EnemyType.HEALER, count: 2 },  // Boss 波有治疗支援
   ],
   
   // 困难模式：11+ 波（使用公式生成）

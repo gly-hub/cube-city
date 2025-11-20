@@ -4,6 +4,7 @@ import { eventBus } from '@/js/utils/event-bus.js'
 import { ref, onMounted, onUnmounted } from 'vue'
 import TowerSidebar from './TowerSidebar.vue'
 import TowerInfoPanel from './TowerInfoPanel.vue'
+import WavePreview from './WavePreview.vue'
 
 const gameState = useGameState()
 // 从持久化数据初始化（而不是硬编码默认值）

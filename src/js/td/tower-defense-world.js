@@ -6,6 +6,9 @@ import TDTile from './td-tile.js'
 import Enemy from './enemy.js'
 import EnemyModelFactory from './enemy-model-factory.js'
 import { getWaveComposition } from './enemy-types.js'
+import { getTowerConfig, TargetPriority } from './tower-config.js'
+import TowerFactory from './tower-factory.js'
+import { findTarget, applySpecialEffect, calculateDamage, createDamageText } from './tower-attack-utils.js'
 
 export default class TowerDefenseWorld {
   constructor() {
@@ -190,38 +193,41 @@ export default class TowerDefenseWorld {
           return
         }
 
-        // 创建防御塔 mesh
-        const tower = new THREE.Mesh(
-          new THREE.CylinderGeometry(0.3, 0.5, 1, 8),
-          new THREE.MeshStandardMaterial({ 
-            color: towerData.type === 'basic' ? 0x4a9eff : 
-                   towerData.type === 'rapid' ? 0xffb800 : 0xff4757 
-          })
-        )
+        // ===== 使用新的塔配置系统和工厂 =====
+        const towerConfig = getTowerConfig(towerData.type, towerData.level || 1)
+        const tower = TowerFactory.createTowerMesh(towerConfig.type, towerData.level || 1)
+        
+        // ===== 修复：塔相对于 tile 的位置（保持和 placeTowerFromDrag 一致） =====
+        tower.position.set(0, 0.2, 0) // 降低高度，让塔贴在地面上
+        tower.castShadow = true
         
         // 添加到 tile
         tile.setTower(tower)
+        tile.hasTower = true
         
         // 保存防御塔的完整数据
         tower.userData = {
           id: `tower_${towerData.tileX}_${towerData.tileY}`,
-          name: this.getTowerName(towerData.type),
+          name: towerData.name || this.getTowerName(towerData.type),
           type: towerData.type,
-          damage: towerData.damage,
-          range: towerData.range,
-          cooldown: towerData.cooldown,
-          level: towerData.level,
-          cost: towerData.cost,
-          lastFireTime: 0,
+          level: towerData.level || 1,
+          damage: towerData.damage || towerConfig.damage,
+          range: towerData.range || towerConfig.range,
+          cooldown: towerData.cooldown || towerConfig.cooldown,
+          lastAttackTime: 0,
           tile: tile,
+          // ===== 新增：特殊属性 =====
+          targetPriority: towerConfig.targetPriority,
+          specialEffect: towerConfig.specialEffect,
+          projectileType: towerConfig.projectileType,
         }
         
-        // 添加到 towers 数组（只保存 mesh，保持一致性）
+        // 添加到 towers 数组
         this.towers.push(tower)
         
-        console.log(`恢复防御塔: ${tower.userData.name} 等级 ${tower.userData.level} at (${towerData.tileX}, ${towerData.tileY})`)
+        console.log(`✓ 恢复防御塔 ${index}: ${towerData.name} at (${towerData.tileX}, ${towerData.tileY})`)
       } catch (error) {
-        console.error(`恢复防御塔 ${index} 时出错:`, error)
+        console.error(`恢复防御塔 ${index} 失败:`, error)
       }
     })
 
@@ -597,23 +603,28 @@ export default class TowerDefenseWorld {
     // 扣除金币
     this.gameState.updateCredits(-towerType.cost)
 
-    // 创建防御塔
-    const geometry = new THREE.CylinderGeometry(0.4, 0.4, 1.5, 8)
-    const material = new THREE.MeshStandardMaterial({ color: '#4299e1' })
-    const tower = new THREE.Mesh(geometry, material)
+    // ===== 使用新的塔配置系统 =====
+    const towerConfig = getTowerConfig(towerType.id, 1)
+    const tower = TowerFactory.createTowerMesh(towerConfig.type, 1)
     
-    // 塔相对于 tile 的位置（tile 的中心，稍微抬高）
-    tower.position.set(0, 0.75, 0)
+    // ===== 修复：塔相对于 tile 的位置，适配地面高度 =====
+    // grassMesh 的 position.y 是 0，但塔需要放在草地表面上方
+    // grassMesh 的高度是 0.2（BoxGeometry 的 height），所以塔应该在 0.1 + 塔高度的一半
+    tower.position.set(0, 0.2, 0) // 降低高度，让塔贴在地面上
     tower.castShadow = true
 
     tower.userData = {
-      range: towerType.range,
-      damage: towerType.damage,
-      cooldown: 1000,
+      range: towerConfig.range,
+      damage: towerConfig.damage,
+      cooldown: towerConfig.cooldown,
       lastAttackTime: 0,
       type: towerType.id,
       level: 1, // 初始等级为 1
-      tile: tile // 保存对 tile 的引用
+      tile: tile, // 保存对 tile 的引用
+      // ===== 新增：特殊属性 =====
+      targetPriority: towerConfig.targetPriority,
+      specialEffect: towerConfig.specialEffect,
+      projectileType: towerConfig.projectileType,
     }
 
     // 将塔添加到 tile（这样塔会跟随 tile 的位置）
@@ -797,6 +808,11 @@ export default class TowerDefenseWorld {
       if (!enemy || !enemy.isAlive) {
         this.removeEnemy(i)
         continue
+      }
+      
+      // ===== 新增：为治疗单位传递所有敌人 =====
+      if (enemy.stats.special?.healRange) {
+        enemy.updateHealBehavior(dt, this.enemies)
       }
       
       // 调用 Enemy 类的 update 方法
@@ -1116,6 +1132,11 @@ export default class TowerDefenseWorld {
       return
     }
 
+    // ===== 新增：辅助塔不攻击，只提供增益 =====
+    if (tower.userData.specialEffect === 'buff') {
+      return
+    }
+
     const now = this.time.elapsed
     if (now - tower.userData.lastAttackTime < tower.userData.cooldown) return
 
@@ -1123,37 +1144,61 @@ export default class TowerDefenseWorld {
     const towerWorldPos = new THREE.Vector3()
     tower.getWorldPosition(towerWorldPos)
 
-    let target = null
-    let minDist = Infinity
-
-    for (const enemy of this.enemies) {
-      // 适配 Enemy 类：enemy 现在是 Enemy 实例，需要通过 enemy.mesh 获取位置
-      const enemyPos = enemy.getPosition()
-      const dist = towerWorldPos.distanceTo(enemyPos)
-      if (dist <= tower.userData.range && dist < minDist) {
-        minDist = dist
-        target = enemy
-      }
-    }
-
+    // ===== 使用新的目标选择系统 =====
+    const target = findTarget(tower, this.enemies, towerWorldPos)
+    
     if (target) {
-      this.shoot(tower, target, towerWorldPos)
+      // 计算增益加成（来自附近的辅助塔）
+      let damageMultiplier = 1.0
+      for (const otherTower of this.towers) {
+        if (otherTower.userData.specialEffect === 'buff') {
+          const otherPos = new THREE.Vector3()
+          otherTower.getWorldPosition(otherPos)
+          const dist = towerWorldPos.distanceTo(otherPos)
+          if (dist <= otherTower.userData.range) {
+            damageMultiplier *= 1.3 // 30% 伤害加成
+          }
+        }
+      }
+      
+      this.fireProjectile(tower, target, towerWorldPos, damageMultiplier)
       tower.userData.lastAttackTime = now
     }
   }
 
-  shoot(tower, target, towerWorldPos) {
-    const geometry = new THREE.SphereGeometry(0.15)
-    const material = new THREE.MeshBasicMaterial({ color: '#ffff00' })
-    const projectile = new THREE.Mesh(geometry, material)
+  fireProjectile(tower, target, towerWorldPos, damageMultiplier = 1.0) {
+    // ===== 根据塔类型创建不同的子弹 =====
+    let projectileGeometry, projectileMaterial
     
+    switch (tower.userData.projectileType) {
+      case 'laser':
+        projectileGeometry = new THREE.CylinderGeometry(0.05, 0.05, 0.5)
+        projectileMaterial = new THREE.MeshBasicMaterial({ color: '#ff0000', emissive: '#ff0000' })
+        break
+      case 'missile':
+        projectileGeometry = new THREE.ConeGeometry(0.1, 0.4, 8)
+        projectileMaterial = new THREE.MeshStandardMaterial({ color: '#ff6600', emissive: '#ff3300' })
+        break
+      case 'plasma':
+        projectileGeometry = new THREE.SphereGeometry(0.2)
+        projectileMaterial = new THREE.MeshBasicMaterial({ color: '#00ffff', emissive: '#00ffff', transparent: true, opacity: 0.8 })
+        break
+      case 'bullet':
+      default:
+        projectileGeometry = new THREE.SphereGeometry(0.15)
+        projectileMaterial = new THREE.MeshBasicMaterial({ color: '#ffff00' })
+        break
+    }
+    
+    const projectile = new THREE.Mesh(projectileGeometry, projectileMaterial)
     projectile.position.copy(towerWorldPos)
     projectile.position.y += 0.75
     
     projectile.userData = {
       target: target,
       speed: 10,
-      damage: tower.userData.damage
+      damage: tower.userData.damage * damageMultiplier,
+      towerRef: tower, // 保存塔的引用，用于应用特殊效果
     }
 
     this.root.add(projectile)
@@ -1175,15 +1220,32 @@ export default class TowerDefenseWorld {
     const moveDist = projectile.userData.speed * dt
 
     if (moveDist >= dist) {
-      this.hitEnemy(target, projectile.userData.damage)
+      // ===== 传递整个 projectile 对象，包含 towerRef =====
+      this.hitEnemy(target, projectile)
       this.removeProjectile(index)
     } else {
       projectile.position.add(dir.multiplyScalar(moveDist))
     }
   }
 
-  hitEnemy(enemy, damage) {
-    const isDead = enemy.takeDamage(damage)
+  hitEnemy(enemy, projectile) {
+    const tower = projectile.userData.towerRef
+    const baseDamage = projectile.userData.damage
+    
+    // ===== 使用新的伤害计算系统 =====
+    const finalDamage = calculateDamage(tower, enemy, baseDamage)
+    const isCritical = finalDamage > baseDamage * 1.5
+    
+    // 应用伤害
+    const isDead = enemy.takeDamage(finalDamage)
+    
+    // ===== 显示伤害飘字 =====
+    createDamageText(enemy.getPosition(), finalDamage, isCritical, this.root)
+    
+    // ===== 应用特殊效果（减速、AOE等） =====
+    if (tower && tower.userData.specialEffect) {
+      applySpecialEffect(tower, enemy, this.enemies, baseDamage, this.root)
+    }
     
     if (isDead) {
       const index = this.enemies.indexOf(enemy)
@@ -1205,10 +1267,75 @@ export default class TowerDefenseWorld {
 
   removeEnemy(index) {
     const enemy = this.enemies[index]
-    if (enemy) {
-      // 使用 Enemy 类的 destroy 方法
-      enemy.destroy(this.root)
-      this.enemies.splice(index, 1)
+    if (!enemy) return
+    
+    // ===== 新增：处理分裂单位 =====
+    if (enemy.stats.special?.splitCount && !enemy.isAlive) {
+      this.handleSplitterDeath(enemy)
+    }
+    
+    // 使用 Enemy 类的 destroy 方法
+    enemy.destroy(this.root)
+    this.enemies.splice(index, 1)
+  }
+  
+  /**
+   * 处理分裂单位的死亡
+   * @param {Enemy} parentEnemy - 父怪物
+   */
+  handleSplitterDeath(parentEnemy) {
+    const { splitCount, splitHealthRatio, splitSpeedMultiplier } = parentEnemy.stats.special
+    const parentPath = parentEnemy.path
+    const parentPathIndex = parentEnemy.pathIndex
+    
+    // 从当前位置开始的剩余路径
+    const remainingPath = parentPath.slice(parentPathIndex)
+    
+    if (remainingPath.length < 2) {
+      // 如果路径太短，不生成小怪
+      return
+    }
+    
+    console.log(`🧬 分裂单位死亡，生成 ${splitCount} 个小怪`)
+    
+    // 生成小怪
+    for (let i = 0; i < splitCount; i++) {
+      try {
+        // 创建小怪（使用相同类型，标记为分裂体）
+        const splitEnemy = new Enemy(
+          parentEnemy.stats.type,
+          this.wave,
+          remainingPath,
+          this.root,
+          this.enemyModelFactory
+        )
+        
+        // 调整小怪属性
+        splitEnemy.health = parentEnemy.maxHealth * splitHealthRatio
+        splitEnemy.maxHealth = splitEnemy.health
+        splitEnemy.stats.speed *= splitSpeedMultiplier
+        splitEnemy.stats.reward = Math.round(parentEnemy.stats.reward * 0.3) // 小怪奖励减少
+        
+        // 缩小模型
+        splitEnemy.mesh.scale.setScalar(0.6)
+        
+        // 随机偏移位置，避免重叠
+        const offsetX = (Math.random() - 0.5) * 1.0
+        const offsetZ = (Math.random() - 0.5) * 1.0
+        splitEnemy.mesh.position.x += offsetX
+        splitEnemy.mesh.position.z += offsetZ
+        
+        // 标记为分裂体，避免二次分裂
+        if (splitEnemy.stats.special) {
+          splitEnemy.stats.special.splitCount = 0
+        }
+        
+        // 添加到敌人数组
+        this.enemies.push(splitEnemy)
+        
+      } catch (error) {
+        console.error('生成分裂小怪失败:', error)
+      }
     }
   }
 

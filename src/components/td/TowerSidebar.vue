@@ -2,39 +2,88 @@
 import { computed, ref } from 'vue'
 import { useGameState } from '@/stores/useGameState.js'
 import { eventBus } from '@/js/utils/event-bus.js'
+import { TowerType, TOWER_CONFIG, getTowerConfig } from '@/js/td/tower-config.js'
 
 const gameState = useGameState()
 
-// 防御塔类型定义
+// 防御塔类型定义 - 从配置生成
 const towerTypes = [
   { 
-    id: 'basic', 
-    name: { zh: '基础塔', en: 'Basic Tower' }, 
-    cost: 100, 
-    icon: '🔵', 
-    damage: 20, 
-    range: 5,
-    description: { zh: '平衡型防御塔，适合新手', en: 'Balanced tower for beginners' }
+    id: TowerType.BASIC, 
+    icon: '🔫',
+    name: { zh: '基础炮塔', en: 'Basic Tower' },
+    description: { zh: '平衡的防御塔，中等伤害和射程', en: 'Balanced tower with medium damage and range' }
   },
   { 
-    id: 'rapid', 
-    name: { zh: '速射塔', en: 'Rapid Tower' }, 
-    cost: 150, 
-    icon: '⚡', 
-    damage: 15, 
-    range: 4,
-    description: { zh: '攻速快，伤害低', en: 'Fast attack, low damage' }
+    id: TowerType.SLOW, 
+    icon: '❄️',
+    name: { zh: '减速塔', en: 'Slow Tower' },
+    description: { zh: '发射寒冰弹，大幅减慢敌人速度', en: 'Fires ice projectiles that slow enemies' }
   },
   { 
-    id: 'heavy', 
-    name: { zh: '重炮塔', en: 'Heavy Tower' }, 
-    cost: 200, 
-    icon: '💣', 
-    damage: 40, 
-    range: 6,
-    description: { zh: '高伤害，攻速慢', en: 'High damage, slow attack' }
+    id: TowerType.AOE, 
+    icon: '💥',
+    name: { zh: '榴弹炮', en: 'AOE Tower' },
+    description: { zh: '范围爆炸伤害，对付成群敌人', en: 'Area damage, effective against groups' }
+  },
+  { 
+    id: TowerType.SNIPER, 
+    icon: '🎯',
+    name: { zh: '狙击塔', en: 'Sniper Tower' },
+    description: { zh: '超远射程，高伤害，专打高价值目标', en: 'Long range, high damage, targets priority enemies' }
+  },
+  { 
+    id: TowerType.SUPPORT, 
+    icon: '🛡️',
+    name: { zh: '辅助塔', en: 'Support Tower' },
+    description: { zh: '不攻击，但增强周围塔的属性', en: 'Buffs nearby towers, does not attack' }
+  },
+  { 
+    id: TowerType.ANTI_AIR, 
+    icon: '🚀',
+    name: { zh: '防空塔', en: 'Anti-Air Tower' },
+    description: { zh: '专门攻击飞行单位', en: 'Specialized against flying enemies' }
   },
 ]
+
+// 为每个塔添加配置数据
+const towersWithConfig = computed(() => {
+  return towerTypes.map(tower => {
+    const config = getTowerConfig(tower.id, 1) // 获取 Lv1 配置
+    return {
+      ...tower,
+      cost: config?.cost || 100,
+      damage: config?.damage || 0,
+      range: config?.range || 3,
+      cooldown: config?.cooldown || 1,
+      specialText: getSpecialText(tower.id, config)
+    }
+  })
+})
+
+// 获取特殊效果描述
+function getSpecialText(towerType, config) {
+  if (!config) return ''
+  
+  const lang = gameState.language
+  
+  switch (towerType) {
+    case TowerType.SLOW:
+      const slowPercent = Math.round((1 - config.slowEffect.multiplier) * 100)
+      return lang === 'zh' ? `减速${slowPercent}%` : `Slow ${slowPercent}%`
+    case TowerType.AOE:
+      return lang === 'zh' ? `范围${config.aoeRadius}格` : `AOE ${config.aoeRadius}`
+    case TowerType.SNIPER:
+      return lang === 'zh' ? `暴击${config.critChance * 100}%` : `Crit ${config.critChance * 100}%`
+    case TowerType.SUPPORT:
+      const buffPercent = Math.round(config.buffEffect.damageBonus * 100)
+      return lang === 'zh' ? `+${buffPercent}%伤害` : `+${buffPercent}% DMG`
+    case TowerType.ANTI_AIR:
+      return lang === 'zh' ? '仅防空' : 'Air Only'
+    default:
+      return ''
+  }
+}
 
 const language = computed(() => gameState.language)
 const draggingTower = ref(null)
@@ -93,7 +142,7 @@ function handleDragEnd() {
       <!-- 防御塔列表（可拖拽） - 使用网格布局 -->
       <div class="grid grid-cols-2 gap-2 mb-6">
         <div
-          v-for="tower in towerTypes"
+          v-for="tower in towersWithConfig"
           :key="tower.id"
           class="building-card-industrial rounded-lg p-3 cursor-grab active:cursor-grabbing transition-all"
           :class="[
@@ -120,9 +169,12 @@ function handleDragEnd() {
             <span class="text-xs">💰</span>
             <span class="tracking-widest">{{ tower.cost }}</span>
           </div>
-          <div class="text-[10px] text-center text-gray-500 mt-1 space-x-2">
-            <span>⚔️{{ tower.damage }}</span>
+          <div class="text-[10px] text-center text-gray-500 mt-1 space-x-1">
+            <span v-if="tower.damage > 0">⚔️{{ tower.damage }}</span>
             <span>📡{{ tower.range }}</span>
+          </div>
+          <div v-if="tower.specialText" class="text-[9px] text-center text-blue-400 mt-1">
+            {{ tower.specialText }}
           </div>
         </div>
       </div>
@@ -137,7 +189,7 @@ function handleDragEnd() {
           </div>
         </div>
         <div class="space-y-1 text-xs">
-          <div class="flex justify-between">
+          <div v-if="hoveredTower.damage > 0" class="flex justify-between">
             <span class="text-gray-400">{{ language === 'zh' ? '伤害' : 'Damage' }}:</span>
             <span class="text-white font-bold">{{ hoveredTower.damage }}</span>
           </div>
@@ -146,8 +198,16 @@ function handleDragEnd() {
             <span class="text-white font-bold">{{ hoveredTower.range }}</span>
           </div>
           <div class="flex justify-between">
+            <span class="text-gray-400">{{ language === 'zh' ? '攻速' : 'Speed' }}:</span>
+            <span class="text-white font-bold">{{ (1 / hoveredTower.cooldown).toFixed(1) }}/s</span>
+          </div>
+          <div class="flex justify-between">
             <span class="text-gray-400">{{ language === 'zh' ? '成本' : 'Cost' }}:</span>
             <span class="text-industrial-yellow font-bold">💰{{ hoveredTower.cost }}</span>
+          </div>
+          <div v-if="hoveredTower.specialText" class="flex justify-between pt-1 border-t border-gray-700">
+            <span class="text-blue-400">{{ language === 'zh' ? '特殊' : 'Special' }}:</span>
+            <span class="text-blue-300 font-bold">{{ hoveredTower.specialText }}</span>
           </div>
         </div>
       </div>
@@ -161,9 +221,10 @@ function handleDragEnd() {
           </span>
         </div>
         <ul class="space-y-1 leading-relaxed">
-          <li>• {{ language === 'zh' ? '基础塔适合早期防御' : 'Basic towers for early defense' }}</li>
-          <li>• {{ language === 'zh' ? '速射塔对付快速敌人' : 'Rapid towers for fast enemies' }}</li>
-          <li>• {{ language === 'zh' ? '重炮塔对付重装单位' : 'Heavy towers for armored units' }}</li>
+          <li>• {{ language === 'zh' ? '减速塔控制快速敌人' : 'Slow towers control fast enemies' }}</li>
+          <li>• {{ language === 'zh' ? '榴弹炮对付成群敌人' : 'AOE towers for groups' }}</li>
+          <li>• {{ language === 'zh' ? '防空塔对付飞行单位' : 'Anti-air for flying units' }}</li>
+          <li>• {{ language === 'zh' ? '辅助塔增强周围塔' : 'Support towers buff nearby' }}</li>
         </ul>
       </div>
     </div>
