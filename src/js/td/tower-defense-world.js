@@ -288,6 +288,13 @@ export default class TowerDefenseWorld {
         tile.hasTower = true
         
         // 保存防御塔的完整数据
+        // ===== 修复：cooldown 需要转换为毫秒（配置中是秒）=====
+        // 如果保存的数据已经是毫秒（>100），则直接使用；否则从配置转换
+        const savedCooldown = towerData.cooldown || towerConfig.cooldown
+        const cooldownInMs = savedCooldown > 100 
+          ? savedCooldown  // 已经是毫秒
+          : savedCooldown * 1000  // 转换为毫秒
+        
         tower.userData = {
           id: `tower_${towerData.tileX}_${towerData.tileY}`,
           name: towerData.name || this.getTowerName(towerData.type),
@@ -295,7 +302,7 @@ export default class TowerDefenseWorld {
           level: towerData.level || 1,
           damage: towerData.damage || towerConfig.damage,
           range: towerData.range || towerConfig.range,
-          cooldown: towerData.cooldown || towerConfig.cooldown,
+          cooldown: cooldownInMs,  // 使用转换后的毫秒值
           lastAttackTime: 0,
           tile: tile,
           // ===== 新增：特殊属性 =====
@@ -847,7 +854,8 @@ export default class TowerDefenseWorld {
     tower.userData = {
       range: towerConfig.range,
       damage: towerConfig.damage,
-      cooldown: towerConfig.cooldown,
+      // ===== 修复：cooldown 需要转换为毫秒（配置中是秒）=====
+      cooldown: towerConfig.cooldown * 1000,  // 转换为毫秒
       lastAttackTime: 0,
       type: towerType.id,
       level: 1, // 初始等级为 1
